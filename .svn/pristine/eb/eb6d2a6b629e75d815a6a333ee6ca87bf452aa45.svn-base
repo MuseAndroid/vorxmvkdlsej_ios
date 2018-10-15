@@ -1,0 +1,111 @@
+//
+//  FFCertViewController.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFCertViewController.h"
+
+// View
+#import "FFCertCodeView.h"
+
+// Utility
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+
+// Library
+#import <STPopup/STPopup.h>
+
+@interface FFCertViewController ()
+
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) FFCertCodeView *certView;
+
+@end
+
+@implementation FFCertViewController
+- (instancetype) init
+{
+    self = [super init];
+    if (self)
+    {
+        self.title = @"문자인증번호 확인";
+        self.contentSizeInPopup = CGSizeMake(300, 65);
+        self.landscapeContentSizeInPopup = CGSizeMake(300, 65);
+        [STPopupNavigationBar appearance].barTintColor = [UIColor ff_c1Color];
+        [STPopupNavigationBar appearance].tintColor = [UIColor whiteColor];
+        [STPopupNavigationBar appearance].titleTextAttributes= @{ NSFontAttributeName: [UIFont appleSDGothicNeoMediumWithSize:14.f],
+                                                                  NSForegroundColorAttributeName: [UIColor ff_c5Color]};
+        [STPopupNavigationBar appearance].barStyle = UIBarStyleDefault;
+        
+        [[UIBarButtonItem appearanceWhenContainedIn:[STPopupNavigationBar class], nil]
+         setTitleTextAttributes:@{ NSFontAttributeName: [UIFont appleSDGothicNeoMediumWithSize:14.f],
+                                   NSForegroundColorAttributeName: [UIColor ff_c5Color]} forState:UIControlStateNormal];
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    self.view.backgroundColor = [UIColor ff_c5Color];
+    
+    __weak typeof(self) weakSelf = self;
+    
+    _contentContainer = [[UIView alloc] init];
+    _contentContainer.backgroundColor = [UIColor clearColor];
+    
+    _certView = [[FFCertCodeView alloc] init];
+    _certView.searchHandler = ^{
+        [weakSelf searchBohum];
+    };
+    
+    [_contentContainer addSubview:_certView];
+    [self.view addSubview:_contentContainer];
+    
+    [self makeConstraints];
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(@.0);
+        make.left.equalTo(@.0f);
+        make.right.equalTo(@.0f);
+        make.bottom.equalTo(@.0f);
+    }];
+    
+    [_certView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentContainer.mas_top).with.offset(5.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.bottom.equalTo(_contentContainer.mas_bottom).with.offset(-5.f);
+    }];
+}
+
+- (void) searchBohum // 상용으로 돌릴 시 btn3Click 메서드와 연동시켜야 함.
+{
+    NSString *userName = [[NSUserDefaults standardUserDefaults] objectForKey:@"userName"];
+    NSString *userSsn1 = [[NSUserDefaults standardUserDefaults] objectForKey:@"userSsn1"];
+    NSString *userSsn2 = [[NSUserDefaults standardUserDefaults] objectForKey:@"userSsn2"];
+    NSString *userHpNum = [[NSUserDefaults standardUserDefaults] objectForKey:@"userHpNum"];
+    NSString *telComName = [[NSUserDefaults standardUserDefaults] objectForKey:@"telComName"];
+    NSString *nationCD = [[NSUserDefaults standardUserDefaults] objectForKey:@"nationCode"];
+    NSString *smsResult = [_certView smsResult];
+
+    [self closePage];
+
+    [self btn3Click:userName :userSsn1 :userSsn2 :userHpNum :telComName :smsResult :nationCD];
+}
+
+- (void) closePage
+{
+    NSLog(@"도착했니???");
+    [self dismissViewControllerAnimated:YES completion:nil];
+}
+
+@end

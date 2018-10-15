@@ -1,0 +1,102 @@
+//
+//  FFCertCodeView.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFCertCodeView.h"
+
+// View
+#import "FFTextField.h"
+
+// Utility
+#import "UIFont+FFExtention.h"
+#import "UIColor+FFExtention.h"
+
+@interface FFCertCodeView()
+
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) FFTextField *certTxtField;
+
+@end
+
+@implementation FFCertCodeView
+
+- (instancetype) init {
+    self = [super init];
+    
+    if (self) {
+        self.backgroundColor = [UIColor clearColor];
+        
+        _contentView = [[UIView alloc] init];
+        _contentView.layer.cornerRadius = 10.f;
+        _contentView.backgroundColor = [UIColor ff_c5Color];
+        _contentView.clipsToBounds = YES;
+        
+        _certTxtField = [[FFTextField alloc] init];
+        _certTxtField.keyboardType = UIKeyboardTypeNumberPad;
+        _certTxtField.layer.cornerRadius = 5.f;
+        _certTxtField.textColor = [UIColor blackColor];
+        _certTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:14.f];
+        
+        _searchBtn = [[UIButton alloc] init];
+        _searchBtn.layer.cornerRadius = 5.f;
+        _searchBtn.backgroundColor = [UIColor ff_c2Color];
+        _searchBtn.titleLabel.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+        [_searchBtn setTitle:@"확인" forState:UIControlStateNormal];
+        [_searchBtn addTarget:self action:@selector(searchBohum:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_contentView addSubview:_certTxtField];
+        [_contentView addSubview:_searchBtn];
+        [self addSubview:_contentView];
+        
+        
+        [self makeConstraints];
+    }
+    return self;
+}
+
+#pragma mark - Layout
+- (void)makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(@.0f);
+        make.left.and.right.equalTo(@.0f);
+        make.height.equalTo(@55.f);
+    }];
+    
+    [_certTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentView.mas_top).with.offset(12.5f);
+        make.left.equalTo(_contentView.mas_left).with.offset(12.5f);
+        make.right.equalTo(_contentView.mas_centerX).with.offset(15.f);
+        make.bottom.equalTo((@-12.5f));
+    }];
+    
+    [_searchBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentView.mas_top).with.offset(12.5f);
+        make.left.equalTo(_certTxtField.mas_right).with.offset(10.f);
+        make.right.equalTo((@-12.5f));
+        make.bottom.equalTo((@-12.5f));
+    }];
+}
+
+#pragma mark - Action
+- (void) searchBohum:(id) sender
+{
+    if (_searchHandler)
+    {
+        _searchHandler();
+    }
+}
+
+#pragma mark - Getter
+- (NSString *) smsResult
+{
+    return _certTxtField.text;
+}
+
+@end

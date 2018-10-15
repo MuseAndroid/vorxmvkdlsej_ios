@@ -1,0 +1,299 @@
+//
+//  FFUserAgreeView.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 19.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFUserAgreeView.h"
+
+// Utility
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+
+// Library
+#import <Masonry/Masonry.h>
+
+@interface FFUserAgreeView()
+
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) UIView *overlayContainer;
+@property (strong, nonatomic) UIView *smsContainer;
+@property (strong, nonatomic) UIView *signContainer;
+@property (strong, nonatomic) UIButton *smsBtn;
+@property (strong, nonatomic) UIButton *docSignBtn;
+@property (strong, nonatomic) UIButton *cancelBtn;
+@property (strong, nonatomic) UILabel *smsComent;
+@property (strong, nonatomic) UILabel *signComent;
+@property (nonatomic) NSString *uName;
+@property (nonatomic) NSString *uMobile;
+@property (nonatomic) NSString *pmName;
+@property (nonatomic) NSString *overYN;
+@property (nonatomic) NSString *oName;
+@property (nonatomic) NSString *oRunTime;
+@property (nonatomic) NSString *smsContent;
+@property (nonatomic) NSString *signContent;
+@property (nonatomic) NSString *searchHisContent;
+@property (strong, nonatomic) UILabel *lbUserSearchHis;
+
+@end
+
+@implementation FFUserAgreeView
+
+- (instancetype) init
+{
+    self = [super init];
+    if (self) {
+        self.backgroundColor = [UIColor whiteColor];
+        NSDictionary *giveData = [[NSUserDefaults standardUserDefaults] objectForKey:@"popupUserData"];
+        NSLog(@"전달받은 데이터 - %@", giveData);
+        NSDictionary *overlayData = [[NSUserDefaults standardUserDefaults] objectForKey:@"overlayParam"];
+        NSLog(@"전달받은 데이터1 - %@", overlayData);
+        
+        _uName = [giveData valueForKey:@"CUSTOMER_NAME"];
+        _uMobile = [giveData valueForKey:@"CUST_HP"];
+        _pmName = [giveData valueForKey:@"CONSULTANT_NAME"];
+        
+        _overYN = [overlayData objectForKey:@"overlayYN"];
+        _oName = [overlayData objectForKey:@"search_nm"];
+        _oRunTime = [overlayData objectForKey:@"search_time"];
+        
+        _contentContainer = [[UIView alloc] init];
+        _contentContainer.backgroundColor = [UIColor whiteColor];
+        
+        _smsContainer = [[UIView alloc] init];
+        _smsContainer.backgroundColor = [UIColor ff_c5Color];
+        
+        _overlayContainer = [[UIView alloc] init];
+        _overlayContainer.backgroundColor = [UIColor clearColor];
+        
+        if ([_oName length] != 0) {
+            
+            _searchHisContent = [NSString stringWithFormat:@"%@ 고객님은 %@전에\n보장분석을 진행하였습니다.", _oName, _oRunTime];
+            NSRange overRange1 = [_searchHisContent rangeOfString:_oName];
+            NSRange overRange2 = [_searchHisContent rangeOfString:_oRunTime];
+            NSMutableAttributedString *overString = [[NSMutableAttributedString alloc] initWithString:_searchHisContent];
+            [overString addAttribute:NSForegroundColorAttributeName value:[UIColor darkGrayColor] range:overRange1];
+            [overString addAttribute:NSFontAttributeName value:[UIFont appleSDGothicNeoMediumWithSize:15.f] range:overRange1];
+            [overString addAttribute:NSForegroundColorAttributeName value:[UIColor redColor] range:overRange2];
+            [overString addAttribute:NSFontAttributeName value:[UIFont appleSDGothicNeoMediumWithSize:15.f] range:overRange2];
+            
+            _lbUserSearchHis = [[UILabel alloc] init];
+            _lbUserSearchHis.backgroundColor = [UIColor clearColor];
+            _lbUserSearchHis.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+            _lbUserSearchHis.textColor = [UIColor blackColor];
+            _lbUserSearchHis.textAlignment = NSTextAlignmentCenter;
+            _lbUserSearchHis.numberOfLines = 2;
+            [_lbUserSearchHis setAttributedText:overString];
+        } else {
+            _lbUserSearchHis = [[UILabel alloc] init];
+            _lbUserSearchHis.backgroundColor = [UIColor clearColor];
+            _lbUserSearchHis.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+            _lbUserSearchHis.textColor = [UIColor blackColor];
+            _lbUserSearchHis.textAlignment = NSTextAlignmentCenter;
+            _lbUserSearchHis.numberOfLines = 2;
+            _lbUserSearchHis.text = @"";
+        }
+        
+        _signContainer = [[UIView alloc] init];
+        _signContainer.backgroundColor = [UIColor ff_c5Color];
+        
+        _smsContent = [NSString stringWithFormat:@"%@(%@)님의\n핸드폰으로 고객정보활용동의\n안내 문자를 발송 합니다.", _uName, _uMobile];
+        NSRange range = [_smsContent rangeOfString:@"문자를 발송"];
+        NSMutableAttributedString *smsString = [[NSMutableAttributedString alloc] initWithString:_smsContent];
+        [smsString addAttribute:NSForegroundColorAttributeName value:[UIColor blueColor] range:range];
+        [smsString addAttribute:NSFontAttributeName value:[UIFont boldSystemFontOfSize:15.f] range:range];
+        
+        _smsComent = [[UILabel alloc] init];
+        _smsComent.backgroundColor = [UIColor clearColor];
+        _smsComent.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+        _smsComent.textColor = [UIColor blackColor];
+        _smsComent.numberOfLines = 8;
+        [_smsComent setAttributedText:smsString];
+        
+        _signContent = [NSString stringWithFormat:@"핸드폰 화면에\n출력된 약관을 확인하시고\n%@ 님이 직접 서명 하여\n동의 절차를 진행합니다.", _uName];
+        NSRange range1 = [_signContent rangeOfString:@"직접 서명"];
+        NSMutableAttributedString *signString = [[NSMutableAttributedString alloc] initWithString:_signContent];
+        [signString addAttribute:NSForegroundColorAttributeName value:[UIColor blueColor] range:range1];
+        [signString addAttribute:NSFontAttributeName value:[UIFont boldSystemFontOfSize:15.f] range:range1];
+        
+        _signComent = [[UILabel alloc] init];
+        _signComent.backgroundColor = [UIColor clearColor];
+        _signComent.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+        _signComent.textColor = [UIColor blackColor];
+        _signComent.numberOfLines = 8;
+        [_signComent setAttributedText:signString];
+        
+        _smsBtn = [[UIButton alloc] init];
+        _smsBtn.backgroundColor = [UIColor ff_c18Color];
+        _smsBtn.layer.borderColor = [UIColor ff_c19Color].CGColor;
+        _smsBtn.layer.borderWidth = 1.f;
+        _smsBtn.clipsToBounds = YES;
+        _smsBtn.layer.cornerRadius = 5.f;
+        _smsBtn.contentEdgeInsets = UIEdgeInsetsMake(.0f, -170.f, .0f, .0f);
+        [_smsBtn setImage:[UIImage imageNamed:@"sms_send"] forState:UIControlStateNormal];
+        [_smsBtn addTarget:self action:@selector(sendSMS:) forControlEvents:UIControlEventTouchUpInside];
+        
+        _docSignBtn = [[UIButton alloc] init];
+        _docSignBtn.backgroundColor = [UIColor ff_c18Color];
+        _docSignBtn.layer.borderColor = [UIColor ff_c19Color].CGColor;
+        _docSignBtn.layer.borderWidth = 1.f;
+        _docSignBtn.clipsToBounds = YES;
+        _docSignBtn.layer.cornerRadius = 5.f;
+        _docSignBtn.contentEdgeInsets = UIEdgeInsetsMake(.0f, -170.f, .0f, .0f);
+        [_docSignBtn setImage:[UIImage imageNamed:@"signature_img"] forState:UIControlStateNormal];
+        [_docSignBtn addTarget:self action:@selector(sendSignView:) forControlEvents:UIControlEventTouchUpInside];
+        
+        _cancelBtn = [[UIButton alloc] init];
+        _cancelBtn.clipsToBounds = YES;
+        _cancelBtn.layer.cornerRadius = 5.f;
+        _cancelBtn.titleLabel.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+        _cancelBtn.backgroundColor = [UIColor ff_c2Color];
+        [_cancelBtn setTitle:@"취소" forState:UIControlStateNormal];
+        [_cancelBtn addTarget:self action:@selector(closeWindow:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_overlayContainer addSubview:_lbUserSearchHis];
+        [_smsContainer addSubview:_smsBtn];
+        [_smsContainer addSubview:_smsComent];
+        [_signContainer addSubview:_docSignBtn];
+        [_signContainer addSubview:_signComent];
+        [_contentContainer addSubview:_overlayContainer];
+        [_contentContainer addSubview:_smsContainer];
+        [_contentContainer addSubview:_signContainer];
+        [_contentContainer addSubview:_cancelBtn];
+        [self addSubview:_contentContainer];
+        
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(@.0f);
+        make.left.equalTo(@.0f);
+        make.right.equalTo(@.0f);
+        make.bottom.equalTo(@.0f);
+    }];
+    
+    if ([_oName length] != 0) {
+        [_overlayContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(_contentContainer.mas_top).with.offset(10.f);
+            make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+            make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+            make.height.equalTo(@50.f);
+        }];
+        
+        [_lbUserSearchHis mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.centerX.equalTo(_overlayContainer.mas_centerX);
+            make.centerY.equalTo(_overlayContainer.mas_centerY);
+            make.width.equalTo(_overlayContainer.mas_width);
+        }];
+        
+        [_smsContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(_overlayContainer.mas_bottom).with.offset(10.f);
+            make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+            make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+            make.height.equalTo(@160.f);
+        }];
+        
+        [_cancelBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(_signContainer.mas_bottom).with.offset(10.f);
+            make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+            make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+            make.bottom.equalTo(_contentContainer.mas_bottom).with.offset(-10.5f);
+        }];
+    } else {
+        [_smsContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(_contentContainer.mas_top).with.offset(10.f);
+            make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+            make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+            make.height.equalTo(@160.f);
+        }];
+        
+        [_cancelBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+            make.top.equalTo(_signContainer.mas_bottom).with.offset(10.f);
+            make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+            make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+            make.bottom.equalTo(_contentContainer.mas_bottom).with.offset(-60.5f);
+        }];
+    }
+    
+    [_smsBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_smsContainer.mas_top).with.offset(5.f);
+        make.left.equalTo(_smsContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_smsContainer.mas_right).with.offset(-5.f);
+        make.bottom.equalTo(_smsContainer.mas_bottom).with.offset(-5.f);
+    }];
+    
+    [_smsComent mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_smsContainer.mas_top).with.offset(15.f);
+        make.left.equalTo(_smsContainer.mas_left).with.offset(110.f);
+        make.right.equalTo(_smsContainer.mas_right).with.offset(-15.f);
+        make.bottom.equalTo(_smsContainer.mas_bottom).with.offset(-15.f);
+    }];
+    
+    
+    [_signContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_smsContainer.mas_bottom).with.offset(10.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@160.f);
+    }];
+    
+    [_docSignBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_signContainer.mas_top).with.offset(5.f);
+        make.left.equalTo(_signContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_signContainer.mas_right).with.offset(-5.f);
+        make.bottom.equalTo(_signContainer.mas_bottom).with.offset(-5.f);
+    }];
+    
+    [_signComent mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_signContainer.mas_top).with.offset(15.f);
+        make.left.equalTo(_signContainer.mas_left).with.offset(110.f);
+        make.right.equalTo(_signContainer.mas_right).with.offset(-15.f);
+        make.bottom.equalTo(_signContainer.mas_bottom).with.offset(-15.f);
+    }];
+}
+
+/**
+ SMS버튼 누를 시 진입하는 메서드
+
+ @param btn SMS버튼 객체
+ */
+- (void) sendSMS:(UIButton *) btn
+{
+    if (_sendSMSHandler) {
+        _sendSMSHandler();
+    }
+}
+
+/**
+ Sign버튼 누를 시 진입하는 메서드
+
+ @param btn Sign버튼 객체
+ */
+- (void) sendSignView:(UIButton *) btn
+{
+    if (_sendSignHandler) {
+        _sendSignHandler();
+    }
+}
+
+/**
+ 취소 버튼 누를 시 진입하는 메서드
+
+ @param btn 취소 버튼 객체
+ */
+- (void) closeWindow:(UIButton *)btn
+{
+    if (_cancelWindowHandler) {
+        _cancelWindowHandler();
+    }
+}
+
+@end

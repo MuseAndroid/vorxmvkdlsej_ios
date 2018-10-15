@@ -1,0 +1,6 @@
+framework module iftCoreFramework {
+  umbrella header "iftCoreFramework.h"
+
+  export *
+  module * { export * }
+}

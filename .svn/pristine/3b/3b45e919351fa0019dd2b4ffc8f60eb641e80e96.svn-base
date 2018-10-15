@@ -1,0 +1,21 @@
+//
+//  FFCertCodeView.h
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFView.h"
+
+@interface FFCertCodeView : FFView
+
+@property (copy) void (^searchHandler)(void);
+
+@property (strong, nonatomic) UIButton *searchBtn;
+
+- (instancetype) init;
+
+- (NSString *) smsResult;
+
+@end

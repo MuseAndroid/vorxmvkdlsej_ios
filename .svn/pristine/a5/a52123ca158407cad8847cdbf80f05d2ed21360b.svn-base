@@ -1,0 +1,113 @@
+//
+//  FFCapchaView.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 3.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFCaptcahView.h"
+
+// View
+#import "FFTextField.h"
+
+// Utility
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+
+@interface FFCaptcahView()
+
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UIImageView *captcahImage;
+@property (strong, nonatomic) FFTextField *secureTxtFld;
+
+@end
+
+@implementation FFCaptcahView
+
+- (instancetype) init
+{
+    self = [super init];
+    if (self) {
+        self.backgroundColor = [UIColor clearColor];
+        
+        _contentView = [[UIView alloc] init];
+        _contentView.layer.cornerRadius = 10.f;
+        _contentView.backgroundColor = [UIColor ff_c5Color];
+        _contentView.clipsToBounds = YES;
+        
+        _captcahImage = [[UIImageView alloc] init];
+        
+        _secureTxtFld = [[FFTextField alloc] init];
+        _secureTxtFld.layer.cornerRadius = 5.f;
+        _secureTxtFld.font = [UIFont appleSDGothicNeoMediumWithSize:14.f];
+        _secureTxtFld.textColor = [UIColor blackColor];
+        _secureTxtFld.keyboardType = UIKeyboardTypeDefault;
+        
+        _confirmButton = [[UIButton alloc] init];
+        _confirmButton.backgroundColor = [UIColor ff_c2Color];
+        _confirmButton.layer.cornerRadius = 5.f;
+        _confirmButton.titleLabel.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+        [_confirmButton setTitle:@"보안문자확인" forState:UIControlStateNormal];
+        [_confirmButton addTarget:self action:@selector(requestCertCode:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_contentView addSubview:_captcahImage];
+        [_contentView addSubview:_secureTxtFld];
+        [_contentView addSubview:_confirmButton];
+        [self addSubview:_contentView];
+        
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.and.left.and.right.equalTo(@0.f);
+        make.height.equalTo(@150.f);
+    }];
+    
+    [_captcahImage mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentView.mas_top).with.offset(12.5f);
+        make.left.equalTo(_contentView.mas_left).with.offset(12.5f);
+        make.width.equalTo(@200.f);
+        make.bottom.equalTo(_contentView.mas_centerY);
+    }];
+    
+    [_secureTxtFld mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_captcahImage.mas_bottom).with.offset(12.5f);
+        make.left.equalTo(_contentView.mas_left).with.offset(12.5f);
+        make.right.equalTo(_contentView.mas_centerX).with.offset(5.f);
+        make.bottom.equalTo((@-12.5f));
+    }];
+    
+    [_confirmButton mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_captcahImage.mas_bottom).with.offset(12.5f);
+        make.left.equalTo(_secureTxtFld.mas_right).with.offset(5.f);
+        make.right.equalTo((@-12.5f));
+        make.bottom.equalTo((@-12.5f));
+    }];
+}
+
+- (void) requestCertCode:(id) sender
+{
+    if (_confirmHandler) {
+        _confirmHandler();
+    }
+}
+
+- (void) setCapchaImage:(NSData *)imgData
+{
+    [_captcahImage setImage:[UIImage imageWithData:imgData]];
+}
+
+#pragma mark - Getter
+- (NSString *)confirmTxt
+{
+    return _secureTxtFld.text;
+}
+
+@end

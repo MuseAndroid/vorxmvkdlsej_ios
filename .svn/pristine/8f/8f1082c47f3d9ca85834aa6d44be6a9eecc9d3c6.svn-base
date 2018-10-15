@@ -1,0 +1,251 @@
+//
+//  FFFindUserIDViewController.m
+//  factFinder
+//
+//  Created by Hong Junho on . 4. 2.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFFindUserIDPWViewController.h"
+
+// View
+#import "FFResultIDView.h"
+#import "FFNavigationBar.h"
+#import "FFReBuildPasswordView.h"
+
+// ViewController
+#import "FFLoginViewController.h"
+
+// Utility
+#import "FFUtility.h"
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+
+@interface FFFindUserIDPWViewController ()
+
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) UIScrollView *scrollView;
+@property (strong, nonatomic) FFNavigationBar *naviBar;
+@property (strong, nonatomic) FFLoginViewController *loginVC;
+@property (strong, nonatomic) FFResultIDView *rIDView;
+@property (strong, nonatomic) FFReBuildPasswordView *rbPasswordView;
+@property (nonatomic) NSArray *ar1;
+@property (nonatomic) NSString *Captcha_String;
+@property (nonatomic) NSUInteger i1, i2, i3, i4, i5;
+@property (nonatomic) NSString *userIDStr;
+@property (nonatomic) NSString *idpwYN;
+@property (nonatomic) NSDictionary *findUserParams;
+
+@end
+
+@implementation FFFindUserIDPWViewController
+
+- (instancetype) initWithIdData:(NSString *)idpw :(NSDictionary *)param
+{
+    self = [super init];
+    if (self) {
+        _idpwYN = idpw;
+        _findUserParams = param;
+        self.title = @"계정정보 확인/변경";
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    NSLog(@"넘어온 파라미터 값 = %@", [self stringByReplacingUnicodePoint:_findUserParams]);
+    
+    [self findUserParams];
+    
+    _ar1 = [[NSArray alloc]initWithObjects:@"0",@"1",@"2",@"3",@"4",@"5",@"6",@"7",@"8",@"9",@"a",@"b",@"c",@"d",@"e",@"f",@"g",@"h",@"i",@"j",@"k",@"l",@"m",@"n",@"o",@"p",@"q",@"r",@"s",@"t",@"u",@"v",@"w",@"x",@"y",@"z",@"A",@"B",@"C",@"D",@"E",@"F",@"G",@"H",@"I",@"J",@"K",@"L",@"M",@"N",@"O",@"P",@"Q",@"R",@"S",@"T",@"U",@"V",@"W",@"X",@"Y",@"Z", nil];
+    
+    self.view.backgroundColor = [UIColor ff_c14Color];
+    
+    self.ff_hasNavigationBar = YES;
+    _naviBar = [[FFNavigationBar alloc] initWithStyle:FFNavigationBarStyleBack];
+    _naviBar.title = self.title;
+    __weak typeof(self) weakSelf = self;
+    _naviBar.leftButtonHandler = ^() {
+        [weakSelf backPage];
+    };
+    
+    _contentContainer = [[UIView alloc] init];
+    _contentContainer.backgroundColor = [UIColor clearColor];
+    
+    _rIDView = [[FFResultIDView alloc] init];
+    [_rIDView.lbUserID setText:@"test@genexon.co.kr"];
+    
+    _rbPasswordView = [[FFReBuildPasswordView alloc] init];
+    [_rbPasswordView.userIDStr1 setText:@"test@genexon.co.kr"];
+    
+    if ([_idpwYN isEqualToString:@"id"]) {
+        [self showIdDisplay];
+    } else {
+        [self makeCaptcha];
+        [self showPwDisplay];
+    }
+    
+    [self.view addSubview:_contentContainer];
+    [self.view addSubview:_naviBar];
+    [self makeConstraints];
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_naviBar mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.and.left.and.right.equalTo(@.0f);
+    }];
+    
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_naviBar.mas_bottom);
+        make.left.and.right.equalTo(@.0f);
+        make.bottom.equalTo(self.view.mas_bottom);
+    }];
+}
+- (void) viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    
+    _scrollView.contentSize = _rbPasswordView.frame.size;
+}
+
+- (void) viewWillAppear:(BOOL)animated
+{
+    
+}
+
+- (void) showIdDisplay
+{
+    [_rbPasswordView removeFromSuperview];
+    __weak typeof(self) weakSelf = self;
+    _rIDView.move_login1 = ^() {
+        [weakSelf backPage];
+    };
+    
+    _rIDView.move_FindPW = ^() {
+        [self showPwDisplay];
+    };
+    
+    [_contentContainer addSubview:_rIDView];
+    
+    [_rIDView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentContainer.mas_top).with.offset(12.5f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(12.5f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-12.5f);
+        make.height.equalTo(@180.f);
+    }];
+}
+
+- (void) showPwDisplay
+{
+    [_rIDView removeFromSuperview];
+    _scrollView = [[UIScrollView alloc] init];
+    _scrollView.backgroundColor = [UIColor clearColor];
+    __weak typeof(self) weakSelf = self;
+    _rbPasswordView.move_login2 = ^() {
+        [weakSelf backPage];
+    };
+    
+    _rbPasswordView.save_password = ^() {
+        [weakSelf savePW];
+    };
+    
+    _rbPasswordView.refresh_captcha = ^() {
+        [weakSelf makeCaptcha];
+    };
+    
+    [_scrollView addSubview:_rbPasswordView];
+    [_contentContainer addSubview:_scrollView];
+    
+    [_scrollView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.edges.equalTo(_contentContainer);
+    }];
+    
+    [_rbPasswordView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentContainer.mas_top).with.offset(12.5f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(12.5f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-12.5f);
+        make.height.equalTo(@450.f);
+    }];
+}
+
+- (void) makeCaptcha
+{
+    @try {
+        
+        CGFloat hue = ( arc4random() % 256 / 256.0 );  //  0.0 to 1.0
+        CGFloat saturation = ( arc4random() % 128 / 256.0 ) + 0.5;  //  0.5 to 1.0, away from white
+        CGFloat brightness = ( arc4random() % 128 / 256.0 ) + 0.5;  //  0.5 to 1.0, away from black
+        UIColor *color = [UIColor colorWithHue:hue saturation:saturation brightness:brightness alpha:1];
+        [_rbPasswordView.lbViewCaptcha setBackgroundColor:color];
+        
+        _i1 = arc4random() % [_ar1 count];
+        
+        NSLog(@"RANDOM INDEX:%lu ",(unsigned long)_i1);
+        
+        _i2= arc4random() % [_ar1 count];
+        
+        NSLog(@"RANDOM INDEX:%lu ",(unsigned long)_i2);
+        _i3 = arc4random() % [_ar1 count];
+        
+        NSLog(@"RANDOM INDEX:%lu ",(unsigned long)_i3);
+        
+        _i4 = arc4random() % [_ar1 count];
+        
+        NSLog(@"RANDOM INDEX:%lu ",(unsigned long)_i4);
+        
+        _i5 = arc4random() % [_ar1 count];
+        
+        NSLog(@"RANDOM INDEX:%lu ",(unsigned long)_i5);
+        
+        _Captcha_String = [NSString stringWithFormat:@"%@%@%@%@%@",[_ar1 objectAtIndex:_i1-1],[_ar1 objectAtIndex:_i2-1],[_ar1 objectAtIndex:_i3-1],[_ar1 objectAtIndex:_i4-1],[_ar1 objectAtIndex:_i5-1]];
+        
+        NSLog(@" Captcha String : %@",_Captcha_String);
+        
+        [_rbPasswordView.lbViewCaptcha setText:_Captcha_String];
+    }
+    @catch (NSException *exception) {
+        NSLog(@"%@",exception);
+    }
+}
+
+- (void) savePW
+{
+    // 서버에 데이터 보내는 로직 구현해야 함
+    NSString *writePassword = _rbPasswordView.tfWritePw.text;
+    NSString *reWritePassword = _rbPasswordView.tfWritePwRe.text;
+    NSString *writeCaptcha = _rbPasswordView.tfWriteCaptcha.text;
+    
+    if ([writePassword isEqualToString:reWritePassword]) {
+        if ([writeCaptcha isEqualToString:_Captcha_String]) {
+            // 서버에 보내는 로직 작성
+        } else {
+            [self showAlertWithMessageOK:@"인증코드가 일치하지 않습니다\n다시 입력해주세요"];
+        }
+    } else {
+        [self showAlertWithMessageOK:@"비밀번호가 일치하지 않습니다"];
+    }
+}
+
+- (void) backPage
+{
+    _loginVC = [[FFLoginViewController alloc] init];
+    [FFUtility goHome:_loginVC];
+}
+
+- (void) reqFindUserID
+{
+    // 아이디 가져오는 ajax 구성
+}
+
+- (NSString *)stringByReplacingUnicodePoint:(id)jsonObj
+{
+    NSData *data = [NSJSONSerialization dataWithJSONObject:jsonObj options:0 error:nil];
+    NSString *result = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return result;
+}
+
+@end

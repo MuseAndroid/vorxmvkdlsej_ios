@@ -1,0 +1,632 @@
+//
+//  FFFindUserData1ViewController.m
+//  factFinder
+//
+//  Created by Hong Junho on . 3. 27.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFFindUserData1ViewController.h"
+
+// View
+#import "FFNavigationBar.h"
+#import "FFEmPwView.h"
+#import "FFHPwView.h"
+
+// ViewController
+#import "FFLoginViewController.h"
+#import "FFFindUserIDPWViewController.h"
+
+// Utility
+#import "FFUtility.h"
+#import "UIFont+FFExtention.h"
+#import "UIColor+FFExtention.h"
+
+// Network
+#import "FFNetworkManager.h"
+
+@interface FFFindUserData1ViewController ()
+
+@property (strong, nonatomic) FFNavigationBar *naviBar;
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) UIScrollView *scrollView;
+@property (strong, nonatomic) UIView *contentBody;
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UIButton *agreeMobile;
+@property (strong, nonatomic) UIButton *agreeEmail;
+@property (strong, nonatomic) FFHPwView *hPwView;
+@property (strong, nonatomic) FFEmPwView *emPwView;
+@property (strong, nonatomic) FFLoginViewController *loginVC;
+@property (strong, nonatomic) FFFindUserIDPWViewController *fuIpVC;
+@property (strong, nonatomic) NSDictionary *saveParams;
+@property (nonatomic) NSString *idpw;
+@property (nonatomic) NSString *mbt;
+@property (nonatomic) NSString *mbid;
+@property (nonatomic) NSString *hp_mail;
+@property (nonatomic) NSString *con_id;
+@property (nonatomic) NSString *con_nm;
+@property (nonatomic) NSString *pw;
+@property (nonatomic) NSString *hpNo;
+@property (nonatomic) NSString *mailAd;
+@property (nonatomic) NSString *v_no;
+@property (nonatomic) NSString *ver_idx;
+@property (nonatomic) NSString *vNoURL;
+@property (nonatomic) NSString *vReURL;
+@property (nonatomic) NSString *vFindID;
+@property (nonatomic) NSDictionary *tempDic;
+
+@end
+
+@implementation FFFindUserData1ViewController
+
+- (instancetype) init
+{
+    self = [super init];
+    if (self) {
+        self.title = @"비밀번호 찾기";
+    }
+    
+    return self;
+}
+
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _loginVC = [[FFLoginViewController alloc] init];
+    
+    /* =================================
+     기본 파라미터 및 값 세팅 시작
+     ================================= */
+    _idpw = @"pw";
+    _mbt = @"pers";
+    _mbid = @"NO_MB_ID";
+    _hp_mail = @"hp";
+    _pw = @"";
+    _vNoURL = [NSString stringWithFormat:@"%@/getVerifyNo.ajax", [NSString api_baseURL]];
+    _vReURL = [NSString stringWithFormat:@"%@/checkVerifyNo.ajax", [NSString api_baseURL]];
+    _vFindID = [NSString stringWithFormat:@"%@/mngAccount.ajax", [NSString api_baseURL]];
+    /* =================================
+     기본 파라미터 및 값 세팅 끝
+     ================================= */
+    
+    self.view.backgroundColor = [UIColor ff_c5Color];
+    
+    self.ff_hasNavigationBar = YES;
+    _naviBar = [[FFNavigationBar alloc] initWithStyle:FFNavigationBarStyleBack];
+    _naviBar.title = self.title;
+    __weak typeof(self) weakSelf = self;
+    _naviBar.leftButtonHandler = ^() {
+        [weakSelf backPage];
+    };
+    
+    UIImage *checkImg = [UIImage imageNamed:@"login_radio_sel"];
+    UIImage *unchkImg = [UIImage imageNamed:@"login_radio_nor"];
+    
+    _contentContainer = [[UIView alloc] init];
+    _contentContainer.backgroundColor = [UIColor ff_c14Color];
+    
+    _scrollView = [[UIScrollView alloc] init];
+    _scrollView.backgroundColor = [UIColor clearColor];
+    
+    _contentBody = [[UIView alloc] init];
+    _contentBody.backgroundColor = [UIColor clearColor];
+    
+    _contentView = [[UIView alloc] init];
+    _contentView.backgroundColor = [UIColor ff_c5Color];
+    
+    _agreeMobile = [[UIButton alloc] init];
+    _agreeMobile.clipsToBounds = YES;
+    _agreeMobile.selected = YES;
+    _agreeMobile.titleLabel.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+    [_agreeMobile setContentHorizontalAlignment:UIControlContentHorizontalAlignmentLeft];
+    [_agreeMobile setImage:unchkImg forState:UIControlStateNormal];
+    [_agreeMobile setImage:checkImg forState:UIControlStateSelected];
+    [_agreeMobile setTitle:@"  휴대폰으로 인증" forState:UIControlStateNormal];
+    [_agreeMobile setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_agreeMobile addTarget:self action:@selector(viewHpAgree:) forControlEvents:UIControlEventTouchUpInside];
+    
+    _agreeEmail = [[UIButton alloc] init];
+    _agreeEmail.clipsToBounds = YES;
+    _agreeEmail.selected = NO;
+    _agreeEmail.titleLabel.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+    [_agreeEmail setContentHorizontalAlignment:UIControlContentHorizontalAlignmentLeft];
+    [_agreeEmail setImage:unchkImg forState:UIControlStateNormal];
+    [_agreeEmail setImage:checkImg forState:UIControlStateSelected];
+    [_agreeEmail setTitle:@"  이메일로 인증" forState:UIControlStateNormal];
+    [_agreeEmail setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    [_agreeEmail addTarget:self action:@selector(viewEmailAgree:) forControlEvents:UIControlEventTouchUpInside];
+    
+    _hPwView = [[FFHPwView alloc] init]; // 비밀번호 -> 핸드폰 인증
+    _emPwView = [[FFEmPwView alloc] init]; // 비밀번호 -> 이메일 인증
+    
+    [_contentView addSubview:_agreeMobile];
+    [_contentView addSubview:_agreeEmail];
+    [_contentBody addSubview:_contentView];
+    [_scrollView addSubview:_contentBody];
+    [_contentContainer addSubview:_scrollView];
+    [self.view addSubview:_contentContainer];
+    [self.view addSubview:_naviBar];
+    
+    [self makeConstraints];
+    
+    [self showMobileView];
+}
+
+- (void) viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    _scrollView.contentSize = _contentBody.frame.size;
+    
+    UIRectCorner corners;
+    CGSize cornerSize = CGSizeMake(5.f, 5.f);
+    corners = UIRectCornerTopLeft | UIRectCornerTopRight;
+    UIBezierPath *viewMaskPath;
+    viewMaskPath = [UIBezierPath bezierPathWithRoundedRect:_contentView.bounds byRoundingCorners:corners cornerRadii:cornerSize];
+    
+    CAShapeLayer *viewMaskLayer = [[CAShapeLayer alloc] init];
+    viewMaskLayer.frame = _contentView.bounds;
+    viewMaskLayer.path = viewMaskPath.CGPath;
+    _contentView.layer.mask = viewMaskLayer;
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_naviBar mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.and.left.and.right.equalTo(@.0f);
+    }];
+    
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_naviBar.mas_bottom);
+        make.left.and.right.equalTo(@.0f);
+        make.bottom.equalTo(self.view.mas_bottom);
+    }];
+    
+    [_scrollView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(@.0f);
+        make.left.and.right.equalTo(@.0f);
+        make.bottom.equalTo(@.0f);
+    }];
+    
+    [_contentBody mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_scrollView).with.offset(12.5f);
+        make.left.equalTo(_contentContainer).with.offset(12.5f);
+        make.right.equalTo(_contentContainer).with.offset(-12.5f);
+        make.height.equalTo(@600.f);
+    }];
+    
+    [_contentView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentBody.mas_top);
+        make.left.equalTo(_contentBody.mas_left);
+        make.right.equalTo(_contentBody.mas_right);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_agreeMobile mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.equalTo(_contentView.mas_centerX).with.offset(-70.f);
+        make.centerY.equalTo(_contentView.mas_centerY);
+    }];
+    
+    [_agreeEmail mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.equalTo(_contentView.mas_centerX).with.offset(70.f);
+        make.centerY.equalTo(_contentView.mas_centerY);
+    }];
+}
+
+- (void) backPage
+{
+    [FFUtility changeRootViewController:_loginVC];
+}
+
+- (void) viewHpAgree:(UIButton *)btn
+{
+    NSLog(@"핸드폰 인증 선택");
+    if (!btn.isSelected) {
+        btn.selected = YES;
+        _hp_mail = @"hp";
+        NSLog(@"_hp_mail 값 = %@", _hp_mail);
+        _agreeEmail.selected = NO;
+    }
+    
+    [self showMobileView];
+}
+
+- (void) viewEmailAgree:(UIButton *)btn
+{
+    NSLog(@"이메일 인증 선택");
+    if (!btn.isSelected) {
+        btn.selected = YES;
+        _hp_mail = @"mail";
+        NSLog(@"_hp_mail 값 = %@", _hp_mail);
+        _agreeMobile.selected = NO;
+    }
+    
+    [self showEmailView];
+}
+
+- (void) showMobileView
+{
+    [_emPwView removeFromSuperview];
+    __weak typeof(self) weakSelf = self;
+    _hPwView.req_pwNumHandler = ^{
+        [weakSelf seq_pwNumRequest];
+    };
+    
+    _hPwView.reqHPwHandler = ^{
+        [weakSelf hPwRequest];
+    };
+    
+    [_contentBody addSubview:_hPwView];
+    
+    [_hPwView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentView.mas_bottom);
+        make.left.equalTo(_contentBody.mas_left);
+        make.right.equalTo(_contentBody.mas_right);
+        make.bottom.equalTo(_contentBody.mas_bottom).with.offset(-12.5f);
+    }];
+}
+
+- (void) showEmailView
+{
+    [_hPwView removeFromSuperview];
+    __weak typeof(self) weakSelf = self;
+    _emPwView.req_emPwNumHandler = ^{
+        [weakSelf seq_pwNumRequest1];
+    };
+    
+    _emPwView.reqEmPwHandler = ^{
+        [weakSelf emPwRequest];
+    };
+    
+    [_contentBody addSubview:_emPwView];
+    
+    [_emPwView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentView.mas_bottom);
+        make.left.equalTo(_contentBody.mas_left);
+        make.right.equalTo(_contentBody.mas_right);
+        make.bottom.equalTo(_contentBody.mas_bottom).with.offset(-12.5f);
+    }];
+}
+
+- (void) seq_pwNumRequest
+{
+    NSLog(@"인증번호 요청 버튼(핸드폰)");
+    NSString *pwUserId = [_hPwView.tfInputID text];
+    NSString *pwUserHp = [_hPwView.tfInputHp_pw text];
+    BOOL hpCheck = [self checkMobileNum:pwUserHp];
+    if (hpCheck) {
+        _mailAd = @"";
+        _con_nm = @"";
+        _v_no = @"";
+        NSDictionary *params = @{
+                                 @"IDPW":_idpw,
+                                 @"MBTYPE":_mbt,
+                                 @"HPMAIL":_hp_mail,
+                                 @"MB_ID":_mbid,
+                                 @"CONSULTANT_ID":pwUserId,
+                                 @"CONSULTANT_NAME":_con_nm,
+                                 @"PASSWORD":_pw,
+                                 @"MOBILE_TEL":pwUserHp,
+                                 @"EMAIL":_mailAd,
+                                 @"VERIFY_NO":_v_no
+                                 };
+        NSLog(@"파라미터 값 = %@", params);
+        NSLog(@"URL 위치 = %@", _vNoURL);
+        [FFNetworkManager url:_vNoURL parameter:params success:^(NSDictionary *data) {
+            NSLog(@"결과 값 = %@", data);
+            NSString *statOK = @"인증번호를 전송하였습니다.";
+            NSString *statFail = @"등록되지 않은 사용자이거나\n핸드폰번호 (이메일주소)가 맞지 않습니다.";
+            NSString *statLoginApi = @"GA시스템(ERP/수수료) 시스템의\n아이디/비밀번호찾기를 이용하세요";
+            NSString *stat = [data valueForKey:@"result"];
+            NSArray *statArr = [stat componentsSeparatedByString:@"|"];
+            NSString *statRe = statArr.firstObject;
+            if ([statRe isEqualToString:@"OK"]) {
+                [self showAlertWithMessageOK:statOK];
+                _ver_idx = [data valueForKey:@"verify_idx"];
+            } else {
+                if ([statRe isEqualToString:@"FAIL"]) {
+                    [self showAlertWithMessageOK:statFail];
+                } else if ([statRe isEqualToString:@"LOGIN_API"]) {
+                    [self showAlertWithMessageOK:statLoginApi];
+                }
+            }
+        } failure:^(NSError *error) {
+            
+        }];
+    } else {
+        [self showAlertWithMessageOK:@"핸드폰 번호를 정확히 입력해주세요"];
+    }
+    
+}
+
+- (void) seq_pwNumRequest1
+{
+    NSLog(@"인증번호 요청 버튼(이메일)");
+    NSString *emUserMail = [_emPwView.tfInputEmail_pw text];
+    BOOL mailCheck = [self checkEmail:emUserMail];
+    if (mailCheck) {
+        _con_id = @"";
+        _hpNo = @"";
+        _con_nm = @"";
+        _v_no = @"";
+        NSDictionary *params = @{
+                                 @"IDPW":_idpw,
+                                 @"MBTYPE":_mbt,
+                                 @"HPMAIL":_hp_mail,
+                                 @"MB_ID":_mbid,
+                                 @"CONSULTANT_ID":_con_id,
+                                 @"CONSULTANT_NAME":_con_nm,
+                                 @"PASSWORD":_pw,
+                                 @"MOBILE_TEL":_hpNo,
+                                 @"EMAIL":emUserMail,
+                                 @"VERIFY_NO":_v_no
+                                 };
+        NSLog(@"파라미터 값 = %@", params);
+        NSLog(@"URL 위치 = %@", _vNoURL);
+        [FFNetworkManager url:_vNoURL parameter:params success:^(NSDictionary *data) {
+            NSLog(@"결과 값 = %@", data);
+            NSString *statOK = @"인증번호를 전송하였습니다.";
+            NSString *statFail = @"등록되지 않은 사용자이거나\n핸드폰번호 (이메일주소)가 맞지 않습니다.";
+            NSString *statLoginApi = @"GA시스템(ERP/수수료) 시스템의\n아이디/비밀번호찾기를 이용하세요";
+            NSString *stat = [data valueForKey:@"result"];
+            NSArray *statArr = [stat componentsSeparatedByString:@"|"];
+            NSString *statRe = statArr.firstObject;
+            if ([statRe isEqualToString:@"OK"]) {
+                [self showAlertWithMessageOK:statOK];
+                _ver_idx = [data valueForKey:@"verify_idx"];
+                
+            } else {
+                if ([statRe isEqualToString:@"FAIL"]) {
+                    [self showAlertWithMessageOK:statFail];
+                } else if ([statRe isEqualToString:@"LOGIN_API"]) {
+                    [self showAlertWithMessageOK:statLoginApi];
+                }
+            }
+        } failure:^(NSError *error) {
+            
+        }];
+    } else {
+        [self showAlertWithMessageOK:@"이메일을 정확히 입력해주세요"];
+    }
+}
+
+- (void) hPwRequest
+{
+    NSLog(@"다음 버튼/핸드폰 (서버에 전체 데이터 전송)");
+    NSString *hUserID = [_hPwView.tfInputID text];
+    NSString *hUserHp = [_hPwView.tfInputHp_pw text];
+    BOOL hpCheck = [self checkMobileNum:hUserHp];
+    if (hpCheck) {
+        _con_nm = @"";
+        _mailAd = @"";
+        _v_no = [_hPwView.tfInputSecNum_pw text];
+        NSDictionary *params = @{
+                                 @"IDPW":_idpw,
+                                 @"MBTYPE":_mbt,
+                                 @"HPMAIL":_hp_mail,
+                                 @"MB_ID":_mbid,
+                                 @"CONSULTANT_ID":hUserID,
+                                 @"CONSULTANT_NAME":_con_nm,
+                                 @"PASSWORD":_pw,
+                                 @"MOBILE_TEL":hUserHp,
+                                 @"EMAIL":_mailAd,
+                                 @"VERIFY_NO":_v_no,
+                                 @"VERIFY_IDX":_ver_idx
+                                 };
+        NSLog(@"파라미터 값 = %@", params);
+        NSLog(@"URL 위치 = %@", _vReURL);
+        [FFNetworkManager url:_vReURL parameter:params success:^(NSDictionary *data) {
+            NSLog(@"결과 값 = %@", data);
+            _saveParams = params;
+            NSString *fc_fail = @"등록되지 않은 사용자이거나\n핸드폰번호(이메일주소)가 맞지 않습니다";
+            NSString *login_api = @"GA시스템(ERP/수수료) 시스템의\n아이디/비밀번호찾기를 이용하세요";
+            NSString *idpw_fail = @"인증번호가 맞지 않습니다\n확인 후 다시 입력해주세요";
+            NSString *stat = [data valueForKey:@"result"];
+            NSArray *statArr = [stat componentsSeparatedByString:@"|"];
+            NSString *statRe = statArr.firstObject;
+            if ([statRe isEqualToString:@"ID_OK"]) {
+                [self reqFindUserID:_hp_mail :statRe];
+            } else if ([statRe isEqualToString:@"PW_OK"]) {
+                [self reqFindUserID:_hp_mail :statRe];
+            } else {
+                if ([statRe isEqualToString:@"FC_FAIL"]) {
+                    [self showAlertWithMessageOK:fc_fail];
+                } else if ([statRe isEqualToString:@"LOGIN_API"]) {
+                    [self showAlertWithMessageOK:login_api];
+                } else if ([statRe isEqualToString:@"ID_FAIL"]) {
+                    [self showAlertWithMessageOK:idpw_fail];
+                } else if ([statRe isEqualToString:@"PW_FAIL"]) {
+                    [self showAlertWithMessageOK:idpw_fail];
+                }
+            }
+        } failure:^(NSError *error) {
+            
+        }];
+    } else {
+        [self showAlertWithMessageOK:@"핸드폰 번호를 정확히 입력해주세요"];
+    }
+}
+
+- (void) emPwRequest
+{
+    NSLog(@"다음 버튼/이메일 (서버에 전체 데이터 전송)");
+    NSLog(@"인증번호 요청 버튼(이메일)");
+    NSString *emUserMail = [_emPwView.tfInputEmail_pw text];
+    BOOL mailCheck = [self checkEmail:emUserMail];
+    if (mailCheck) {
+        _con_nm = @"";
+        _con_id = @"";
+        _hpNo = @"";
+        _v_no = [_emPwView.tfInputSecNum_emPw text];
+        NSDictionary *params = @{
+                                 @"IDPW":_idpw,
+                                 @"MBTYPE":_mbt,
+                                 @"HPMAIL":_hp_mail,
+                                 @"MB_ID":_mbid,
+                                 @"CONSULTANT_ID":_con_id,
+                                 @"CONSULTANT_NAME":_con_nm,
+                                 @"PASSWORD":_pw,
+                                 @"MOBILE_TEL":_hpNo,
+                                 @"EMAIL":emUserMail,
+                                 @"VERIFY_NO":_v_no,
+                                 @"VERIFY_IDX":_ver_idx
+                                 };
+        NSLog(@"파라미터 값 = %@", params);
+        NSLog(@"URL 위치 = %@", _vReURL);
+        [FFNetworkManager url:_vReURL parameter:params success:^(NSDictionary *data) {
+            NSLog(@"결과 값 = %@", data);
+            _saveParams = params;
+            NSString *fc_fail = @"등록되지 않은 사용자이거나\n핸드폰번호(이메일주소)가 맞지 않습니다";
+            NSString *login_api = @"GA시스템(ERP/수수료) 시스템의\n아이디/비밀번호찾기를 이용하세요";
+            NSString *idpw_fail = @"인증번호가 맞지 않습니다\n확인 후 다시 입력해주세요";
+            NSString *stat = [data valueForKey:@"result"];
+            NSArray *statArr = [stat componentsSeparatedByString:@"|"];
+            NSString *statRe = statArr.firstObject;
+            if ([statRe isEqualToString:@"ID_OK"]) {
+                [self reqFindUserID:_hp_mail :statRe];
+            } else if ([statRe isEqualToString:@"PW_OK"]) {
+                [self reqFindUserID:_hp_mail :statRe];
+            } else {
+                if ([statRe isEqualToString:@"FC_FAIL"]) {
+                    [self showAlertWithMessageOK:fc_fail];
+                } else if ([statRe isEqualToString:@"LOGIN_API"]) {
+                    [self showAlertWithMessageOK:login_api];
+                } else if ([statRe isEqualToString:@"ID_FAIL"]) {
+                    [self showAlertWithMessageOK:idpw_fail];
+                } else if ([statRe isEqualToString:@"PW_FAIL"]) {
+                    [self showAlertWithMessageOK:idpw_fail];
+                }
+            }
+        } failure:^(NSError *error) {
+            
+        }];
+    } else {
+        [self showAlertWithMessageOK:@"이메일을 정확히 입력해주세요"];
+    }
+}
+
+- (void) reqFindUserID:(NSString *) mailYN :(NSString *)msgResult
+{
+    NSLog(@"아이디 검색");
+    NSLog(@"핸드폰이니 메일이니??? -> %@", mailYN);
+    NSString *hUserID = [_hPwView.tfInputID text];
+    NSString *hUserHp = [_hPwView.tfInputHp_pw text];
+    if ([mailYN isEqualToString:@"hp"]) {
+        _con_nm = @"";
+        _mailAd = @"";
+        _v_no = [_hPwView.tfInputSecNum_pw text];
+        NSDictionary *params = @{
+                                 @"idpw":_idpw,
+                                 @"mbtype":_mbt,
+                                 @"hpmail":_hp_mail,
+                                 @"mb_id":_mbid,
+                                 @"consultant_id":hUserID,
+                                 @"consultant_name":_con_nm,
+                                 @"mobile_tel":hUserHp,
+                                 @"email":_mailAd,
+                                 @"verify_no":_v_no,
+                                 @"verify_idx":_ver_idx
+                                 };
+        NSLog(@"파라미터 값 = %@", params);
+        NSLog(@"URL 위치 = %@", _vFindID);
+        [FFNetworkManager url:_vFindID parameter:params success:^(NSDictionary *data) {
+            NSLog(@"결과 값 = %@", data);
+            _tempDic = [data objectForKey:@"result"];
+            NSString *id_ok = @"ID찾기 인증성공, 다음 페이지로 이동합니다";
+            NSString *pw_ok = @"비밀번호 찾기 인증성공, 다음 페이지로 이동합니다";
+            if ([msgResult isEqualToString:@"ID_OK"]) {
+                [self riseAlert:id_ok];
+            } else {
+                [self riseAlert:pw_ok];
+            }
+            
+        } failure:^(NSError *error) {
+            
+        }];
+    } else {
+        _con_nm = @"";
+        _mailAd = @"";
+        _v_no = [_hPwView.tfInputSecNum_pw text];
+        NSString *emUserMail = [_emPwView.tfInputEmail_pw text];
+        NSDictionary *params = @{
+                                 @"idpw":_idpw,
+                                 @"mbtype":_mbt,
+                                 @"hpmail":_hp_mail,
+                                 @"mb_id":_mbid,
+                                 @"consultant_id":_con_id,
+                                 @"consultant_name":_con_nm,
+                                 @"mobile_tel":_hpNo,
+                                 @"email":emUserMail,
+                                 @"verify_no":_v_no,
+                                 @"verify_idx":_ver_idx
+                                 };
+        NSLog(@"파라미터 값 = %@", params);
+        NSLog(@"URL 위치 = %@", _vFindID);
+        [FFNetworkManager url:_vFindID parameter:params success:^(NSDictionary *data) {
+            NSLog(@"결과 값 = %@", data);
+            _tempDic = [data objectForKey:@"result"];
+            NSString *id_ok = @"ID찾기 인증성공, 다음 페이지로 이동합니다";
+            NSString *pw_ok = @"비밀번호 찾기 인증성공, 다음 페이지로 이동합니다";
+            if ([msgResult isEqualToString:@"ID_OK"]) {
+                [self riseAlert:id_ok];
+            } else {
+                [self riseAlert:pw_ok];
+            }
+            
+            
+        } failure:^(NSError *error) {
+            
+        }];
+    }
+}
+
+- (BOOL)checkEmail:(NSString *)email
+{
+    const char *tmp = [email cStringUsingEncoding:NSUTF8StringEncoding];
+    if (email.length != strlen(tmp)) {
+        return NO;
+    }
+    
+    NSString *check = @"([0-9a-zA-Z_-]+)@([0-9a-zA-Z_-]+)(\\.[0-9a-zA-Z_-]+){1,2}";
+    NSRange match = [email rangeOfString:check options:NSRegularExpressionSearch];
+    if (NSNotFound == match.location) {
+        return NO;
+    }
+    return YES;
+}
+
+-(BOOL)checkMobileNum:(NSString *)hp
+{
+    const char *tmp = [hp cStringUsingEncoding:NSUTF8StringEncoding];
+    if (hp.length != strlen(tmp)) {
+        return NO;
+    }
+    
+    NSString *check = @"(010|011|016|017|018|019)([0-9]{7,8})";
+    NSRange match = [hp rangeOfString:check options:NSRegularExpressionSearch];
+    if (NSNotFound == match.location) {
+        return NO;
+    }
+    return YES;
+}
+
+- (void) riseAlert:(NSString *)msg
+{
+    UIWindow *topWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+    topWindow.rootViewController = [UIViewController new];
+    topWindow.windowLevel = UIWindowLevelAlert + 1;
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"" message:msg preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *commitAction = [UIAlertAction actionWithTitle:@"확인" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        topWindow.hidden = YES;
+        _fuIpVC = [[FFFindUserIDPWViewController alloc] initWithIdData:_idpw :_tempDic];
+        [FFUtility changeRootViewController:_fuIpVC];
+        
+    }];
+    [alertController addAction:commitAction];
+    [topWindow makeKeyAndVisible];
+    [topWindow.rootViewController presentViewController:alertController animated:NO completion:nil];
+}
+
+@end

@@ -1,0 +1,168 @@
+//
+//  FFCertCodeView.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFCertCodeView.h"
+
+// View
+#import "FFTextField.h"
+
+// Utility
+#import "UIFont+FFExtention.h"
+#import "UIColor+FFExtention.h"
+
+@interface FFCertCodeView() <UITextFieldDelegate>
+
+@property (strong, nonatomic) UIView *contentView;
+@property (strong, nonatomic) UILabel *userTelInfo;
+@property (strong, nonatomic) FFTextField *certTxtField;
+@property (strong, nonatomic) UILabel *timeLabel;
+@property (strong, nonatomic) NSDate *startTime;
+@property (nonatomic) NSString *userTel;
+
+@end
+
+@implementation FFCertCodeView
+
+- (instancetype) init {
+    self = [super init];
+    
+    if (self) {
+        self.backgroundColor = [UIColor clearColor];
+        
+        _startTime = [NSDate date];
+        
+        _stopwatch = [NSTimer scheduledTimerWithTimeInterval:1.0 target:self selector:@selector(setTimeStringToCurrentTrackingTimeLabel) userInfo:nil repeats:YES];
+        
+        _contentView = [[UIView alloc] init];
+        _contentView.layer.cornerRadius = 10.f;
+        _contentView.backgroundColor = [UIColor ff_c5Color];
+        _contentView.clipsToBounds = YES;
+        
+        NSString *userHpNum = [[NSUserDefaults standardUserDefaults] objectForKey:@"userHpNum"];
+        
+        _userTelInfo = [[UILabel alloc] init];
+        _userTelInfo.backgroundColor = [UIColor clearColor];
+        _userTelInfo.numberOfLines = 2;
+        _userTelInfo.text = [NSString stringWithFormat:@"%@번으로\n인증번호를 전송했습니다.", userHpNum];
+        _userTelInfo.font = [UIFont appleSDGothicNeoMediumWithSize:25.f];
+        _userTelInfo.textColor = [UIColor blackColor];
+        _userTelInfo.textAlignment = NSTextAlignmentCenter;
+        
+        _certTxtField = [[FFTextField alloc] init];
+        _certTxtField.keyboardType = UIKeyboardTypeNumberPad;
+        _certTxtField.layer.cornerRadius = 5.f;
+        _certTxtField.textColor = [UIColor blackColor];
+        _certTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:14.f];
+        _certTxtField.textAlignment = NSTextAlignmentCenter;
+        
+        _timeLabel = [[UILabel alloc] init];
+        _timeLabel.backgroundColor = [UIColor clearColor];
+        _timeLabel.text = @"02:59";
+        _timeLabel.font = [UIFont appleSDGothicNeoMediumWithSize:13.f];
+        _timeLabel.textColor = [UIColor blackColor];
+        
+        _searchBtn = [[UIButton alloc] init];
+        _searchBtn.layer.cornerRadius = 5.f;
+        _searchBtn.backgroundColor = [UIColor ff_c2Color];
+        _searchBtn.titleLabel.font = [UIFont appleSDGothicNeoMediumWithSize:15.f];
+        [_searchBtn setTitle:@"보장분석하기" forState:UIControlStateNormal];
+        [_searchBtn addTarget:self action:@selector(searchBohum:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_contentView addSubview:_userTelInfo];
+        [_contentView addSubview:_certTxtField];
+        [_contentView addSubview:_timeLabel];
+        [_contentView addSubview:_searchBtn];
+        [self addSubview:_contentView];
+        
+        
+        [self makeConstraints];
+    }
+    return self;
+}
+
+#pragma mark - Layout
+- (void)makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.edges.equalTo(self);
+    }];
+    
+    [_userTelInfo mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentView.mas_top).with.offset(80.f);
+        make.centerX.equalTo(self);
+        make.left.equalTo(@5.f);
+        make.right.equalTo((@-5.f));
+        make.height.equalTo(@120.f);
+    }];
+    
+    [_certTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_userTelInfo.mas_bottom).with.offset(20.f);
+        make.left.equalTo(_contentView.mas_left).with.offset(12.5f);
+        make.right.equalTo(_contentView.mas_centerX).with.offset(80.f);
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_timeLabel mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_userTelInfo.mas_bottom).with.offset(20.f);
+        make.right.equalTo((@-12.5f));
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_searchBtn mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_certTxtField.mas_bottom).with.offset(20.f);
+        make.left.equalTo(@12.5f);
+        make.right.equalTo((@-12.5f));
+        make.height.equalTo(@40.f);
+    }];
+}
+
+#pragma mark - Action
+- (void) searchBohum:(id) sender
+{
+    [_stopwatch invalidate];
+    if (_searchHandler)
+    {
+        _searchHandler();
+    }
+}
+
+#pragma mark - Getter
+- (NSString *) smsResult
+{
+    return _certTxtField.text;
+}
+
+- (void) setTimeStringToCurrentTrackingTimeLabel
+{
+    int time = -[_startTime timeIntervalSinceNow];
+    int hour, min, sec;
+    hour = time/(60*60);
+    time %= 60*60;
+    min = 2 - time/60;
+    time %= 60;
+    sec = 59 - time;
+    _timeLabel.text = [NSString stringWithFormat:@"%02d:%02d", min, sec];
+    if (min == 0 && sec == 0) {
+        [_stopwatch invalidate];
+        if (_stopHandler) {
+            _stopHandler();
+        }
+    }
+}
+
+- (BOOL) textFieldShouldReturn:(FFTextField *)textField
+{
+    if ([textField isEqual:_certTxtField]) {
+        _searchHandler();
+    }
+    return YES;
+}
+
+@end

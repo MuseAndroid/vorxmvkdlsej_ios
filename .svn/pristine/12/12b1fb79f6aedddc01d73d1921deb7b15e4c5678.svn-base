@@ -1,0 +1,249 @@
+//
+//  FFComLoginView.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 5.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFComLoginView.h"
+
+// View
+#import "FFTextField.h"
+
+// Utility
+#import "UIFont+FFExtention.h"
+#import "UIColor+FFExtention.h"
+
+@interface FFComLoginView() <UITextFieldDelegate>
+
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) UIView *comCodeView;
+@property (strong, nonatomic) UIView *empCodeView;
+@property (strong, nonatomic) UIView *comPasswdView;
+@property (strong, nonatomic) UIImageView *comCodeImg;
+@property (strong, nonatomic) UIImageView *empCodeImg;
+@property (strong, nonatomic) UIImageView *comPasswdImg;
+
+@end
+
+@implementation FFComLoginView
+
+- (instancetype) init
+{
+    self = [super init];
+    if (self) {
+        CGFloat newAlpha = 0.25f;
+        
+        _contentContainer = [[UIView alloc] init];
+        _contentContainer.backgroundColor = [UIColor clearColor];
+        
+        _comCodeView = [[UIView alloc] init];
+        _comCodeView.backgroundColor = [UIColor ff_c5Color];
+        CGColorRef color1 = CGColorCreateCopyWithAlpha(_comCodeView.layer.backgroundColor, newAlpha);
+        [_comCodeView.layer setBackgroundColor:color1];
+        
+        _empCodeView = [[UIView alloc] init];
+        _empCodeView.backgroundColor = [UIColor ff_c5Color];
+        CGColorRef color2 = CGColorCreateCopyWithAlpha(_empCodeView.layer.backgroundColor, newAlpha);
+        [_empCodeView.layer setBackgroundColor:color2];
+        
+        _comPasswdView = [[UIView alloc] init];
+        _comPasswdView.backgroundColor = [UIColor ff_c5Color];
+        CGColorRef color3 = CGColorCreateCopyWithAlpha(_comPasswdView.layer.backgroundColor, newAlpha);
+        [_comPasswdView.layer setBackgroundColor:color3];
+        
+        _comCodeImg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"com_title_img"]];
+        _empCodeImg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"emp_title_img"]];
+        _comPasswdImg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"passwd_title_img"]];
+        
+        _comCodeTxtField = [[FFTextField alloc] init];
+        _comCodeTxtField.delegate = self;
+        _comCodeTxtField.backgroundColor = [UIColor clearColor];
+        _comCodeTxtField.layer.borderColor = [UIColor clearColor].CGColor;
+        _comCodeTxtField.textColor = [UIColor whiteColor];
+        _comCodeTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:15.f];
+        _comCodeTxtField.placeholder = @"회사코드";
+        _comCodeTxtField.returnKeyType = UIReturnKeyNext;
+        
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"comCode"]) {
+            _comCodeTxtField.text = [[NSUserDefaults standardUserDefaults] objectForKey:@"comCode"];
+        }
+        
+        _empCodeTxtField = [[FFTextField alloc] init];
+        _empCodeTxtField.delegate = self;
+        _empCodeTxtField.backgroundColor = [UIColor clearColor];
+        _empCodeTxtField.textColor = [UIColor whiteColor];
+        _empCodeTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:15.f];
+        _empCodeTxtField.layer.borderColor = [UIColor clearColor].CGColor;
+        _empCodeTxtField.placeholder = @"사원코드";
+        _empCodeTxtField.returnKeyType = UIReturnKeyNext;
+        
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"empCode"]) {
+            _empCodeTxtField.text = [[NSUserDefaults standardUserDefaults] objectForKey:@"empCode"];
+        }
+        
+        _passwdTxtField = [[FFTextField alloc] init];
+        _passwdTxtField.backgroundColor = [UIColor clearColor];
+        _passwdTxtField.delegate = self;
+        _passwdTxtField.textColor = [UIColor whiteColor];
+        _passwdTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:15.f];
+        _passwdTxtField.secureTextEntry = YES;
+        _passwdTxtField.layer.borderColor = [UIColor clearColor].CGColor;
+        _passwdTxtField.placeholder = @"비밀번호";
+        _passwdTxtField.returnKeyType = UIReturnKeyDone;
+        
+        
+        _submitLogin = [[UIButton alloc] init];
+        _submitLogin.clipsToBounds = YES;
+        _submitLogin.backgroundColor = [UIColor ff_c14Color];
+        _submitLogin.layer.cornerRadius = 5.f;
+        _submitLogin.titleLabel.font=[UIFont boldSystemFontOfSize:20.f];
+        _submitLogin.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+        [_submitLogin setTitle:@"로그인" forState:UIControlStateNormal];
+        [_submitLogin setTitleColor:[UIColor ff_c15Color] forState:UIControlStateNormal];
+        [_submitLogin addTarget:self action:@selector(goLogin:) forControlEvents:UIControlEventTouchUpInside];
+        
+        [_comCodeView addSubview:_comCodeImg];
+        [_comCodeView addSubview:_comCodeTxtField];
+        [_empCodeView addSubview:_empCodeImg];
+        [_empCodeView addSubview:_empCodeTxtField];
+        [_comPasswdView addSubview:_comPasswdImg];
+        [_comPasswdView addSubview:_passwdTxtField];
+        [_contentContainer addSubview:_comCodeView];
+        [_contentContainer addSubview:_empCodeView];
+        [_contentContainer addSubview:_comPasswdView];
+        [_contentContainer addSubview:_submitLogin];
+        
+        [self addSubview:_contentContainer];
+        
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.and.bottom.equalTo(@.0f);
+        make.left.equalTo(@5.f);
+        make.right.equalTo((@-5.f));
+    }];
+    
+    [_comCodeView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentContainer.mas_top).with.offset(5.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_empCodeView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_comCodeView.mas_bottom).with.offset(1.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_comPasswdView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_empCodeView.mas_bottom).with.offset(1.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_comCodeImg mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_comCodeView);
+        make.left.equalTo(_comCodeView.mas_left).with.offset(10.f);
+        make.width.equalTo(@40.f);
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_comCodeTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_comCodeView);
+        make.left.equalTo(_comCodeImg.mas_right).with.offset(10.f);
+        make.right.equalTo(_comCodeView.mas_right);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_empCodeImg mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_empCodeView);
+        make.left.equalTo(_empCodeView.mas_left).with.offset(10.f);
+        make.width.equalTo(@40.f);
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_empCodeTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_empCodeView.mas_centerY);
+        make.left.equalTo(_empCodeImg.mas_right).with.offset(10.f);
+        make.right.equalTo(_empCodeView.mas_right);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_comPasswdImg mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_comPasswdView.mas_centerY);
+        make.left.equalTo(_comPasswdView.mas_left).with.offset(10.f);
+        make.width.equalTo(@40.f);
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_passwdTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_comPasswdView.mas_centerY);
+        make.left.equalTo(_comPasswdImg.mas_right).with.offset(10.f);
+        make.right.equalTo(_comPasswdView.mas_right);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_submitLogin mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_comPasswdView.mas_bottom).with.offset(10.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+}
+
+/**
+ 로그인 버튼 터치 이벤트를 감지하여 이벤트 핸들러를 동작시키는 메서드
+
+ @param sender 로그인 버튼 객체
+ */
+- (void) goLogin:(id)sender
+{
+    if (_comLoginHandler) {
+        _comLoginHandler();
+    }
+}
+
+#pragma mark - Getter
+- (NSDictionary *)LoginResult
+{
+    NSMutableDictionary *loginParam = @{
+                                        @"comCode":_comCodeTxtField.text,
+                                        @"empCode":_empCodeTxtField.text,
+                                        @"comPasswd":_passwdTxtField.text
+                                        }.mutableCopy;
+    return loginParam;
+}
+
+#pragma mark - Keyboard Effect
+/**
+ 키패드 다음(next)버튼 누를 때 다음 TextField로 커서 이동시키는 메서드
+
+ @param textField 회사코드, 사원코드, 비밀번호 TextField
+ @return 다음 위치의 TextField
+ */
+- (BOOL) textFieldShouldReturn:(FFTextField *)textField
+{
+    if ([textField isEqual:_comCodeTxtField]) {
+        [_empCodeTxtField becomeFirstResponder];
+    } else if ([textField isEqual:_empCodeTxtField]) {
+        [_passwdTxtField becomeFirstResponder];
+    } else {
+        [_passwdTxtField resignFirstResponder];
+        _comLoginHandler();
+    }
+    return YES;
+}
+
+@end

@@ -1,0 +1,808 @@
+//
+//  FFViewController.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFViewController.h"
+
+// Utility
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+#import "FFUtility.h"
+
+// ViewController
+#import "FFCaptcahViewController.h"
+#import "FFCertViewController.h"
+#import "FFCrawlingViewController.h"
+#import "FFMainWebViewController.h"
+
+// Manager
+#import "FFNetworkManager.h"
+
+// Library
+#import <Toast/UIView+Toast.h>
+#import <STPopup/STPopup.h>
+#import <Masonry/Masonry.h>
+#import <iftCoreFramework/iftCoreFramework.h>
+#import <SVProgressHUD/SVProgressHUD.h>
+
+@interface FFViewController ()
+{
+    NSString *tnk_sr;
+    NSString *captcah;
+    NSString *apiUrl;
+}
+
+@property (strong, nonatomic) FFCrawlingViewController *crawlingVC;
+@property (strong, nonatomic) SVProgressHUD *HUD;
+@property (nonatomic) NSTimer *timer;
+@property (nonatomic) NSTimer *timer1;
+
+@end
+
+@implementation FFViewController
+
+#pragma mark - LifeCycle
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(iftCoreProgressChanged:) name:iftCoreProgressChangeNotification object:nil];
+    
+    self.view.backgroundColor = [UIColor ff_c9Color];
+    
+    _crawlingVC = [[FFCrawlingViewController alloc] init];
+    
+    _ff_hasNavigationBar = NO;
+    _ff_navigationBar = [[FFNavigationBar alloc] init];
+    _ff_navigationBar.hidden = !_ff_hasNavigationBar;
+    _ff_navigationBar.userInteractionEnabled = _ff_hasNavigationBar;
+    _ff_navigationBar.title = self.title;
+    
+    [self setNeedsStatusBarAppearanceUpdate];
+    [self.view addSubview:_ff_navigationBar];
+}
+
+-(void) makeConstraints
+{
+    [_ff_navigationBar mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.left.equalTo(@.0f);
+        make.right.equalTo(@.0f);
+        make.top.equalTo(@.0f);
+        make.height.equalTo(@64.f);
+    }];
+}
+
++ (UIStatusBarStyle) preferredStatusBarStyle
+{
+    return UIStatusBarStyleDefault;
+}
+
+#pragma mark - Action
+
+- (void) showHUD1
+{
+    [SVProgressHUD show];
+}
+
+- (void) deleteHUD1
+{
+    [SVProgressHUD dismiss];
+}
+
+- (void)showAlertWithMessage:(NSString *)message
+{
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"" message:message preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *commitAction = [UIAlertAction actionWithTitle:@"확인" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [alertController dismissViewControllerAnimated:YES completion:nil];
+    }];
+    UIAlertAction *closeAction = [UIAlertAction actionWithTitle:@"닫기" style:UIAlertActionStyleCancel handler:nil];
+    [alertController addAction:commitAction];
+    [alertController addAction:closeAction];
+    [self presentViewController:alertController animated:YES completion:nil];
+}
+
+- (UIStatusBarStyle)preferredStatusBarStyle {
+    return UIStatusBarStyleLightContent;
+}
+
+- (void)showAlertWithMessageOK:(NSString *)message
+{
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"" message:message preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *commitAction = [UIAlertAction actionWithTitle:@"확인" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [alertController dismissViewControllerAnimated:YES completion:nil];
+    }];
+    
+    [alertController addAction:commitAction];
+    [self presentViewController:alertController animated:YES completion:nil];
+}
+
+- (void)requestCheckAppVersion
+{
+    NSLog(@"앱 버전 체크 시작!!!!!!!");
+    NSDictionary *bundleInfo = [[NSBundle mainBundle] infoDictionary];
+    NSString *bundleIdentifier = [bundleInfo valueForKey:@"CFBundleIdentifier"];
+    NSURL *lookupURL = [NSURL URLWithString:[NSString stringWithFormat:@"http://itunes.apple.com/lookup?bundleId=%@", bundleIdentifier]];
+    NSData *lookupResults = [NSData dataWithContentsOfURL:lookupURL];
+    NSDictionary *jsonResults = [NSJSONSerialization JSONObjectWithData:lookupResults options:0 error:nil];
+    
+    NSUInteger resultCont = [[jsonResults objectForKey:@"resultCount"] integerValue];
+    if (resultCont) {
+        NSDictionary *appDetails = [[jsonResults objectForKey:@"results"] firstObject];
+        NSString *latestVersion = [appDetails objectForKey:@"version"];
+        NSString *currentVersion = [bundleInfo objectForKey:@"CFBundleShortVersionString"];
+        NSLog(@"latestVersion==============%@", latestVersion);
+        NSLog(@"currentVersion=============%@", currentVersion);
+        
+        NSArray *verTemp1 = [latestVersion componentsSeparatedByString:@"."];
+        NSArray *verTemp2 = [currentVersion componentsSeparatedByString:@"."];
+        
+        NSLog(@"상용 버전 : %@", verTemp1);
+        NSLog(@"앱 버전 : %@", verTemp2);
+        
+        NSInteger realInt0 = [verTemp1[0] integerValue];
+        NSInteger realInt1 = [verTemp1[1] integerValue];
+        NSInteger realInt2 = [verTemp1[2] integerValue];
+        
+        NSInteger curInt0 = [verTemp2[0] integerValue];
+        NSInteger curInt1 = [verTemp2[1] integerValue];
+        NSInteger curInt2 = [verTemp2[2] integerValue];
+        
+        if (realInt0 <= curInt0) {
+            if (realInt1 <= curInt1) {
+                if (realInt2 <= curInt2) {
+                    NSLog(@"최신버전");
+                } else {
+                    [self updatePopup];
+                }
+            } else {
+                [self updatePopup];
+            }
+        } else {
+            [self updatePopup];
+        }
+    } else {
+        UIWindow *topWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        topWindow.rootViewController = [UIViewController new];
+        topWindow.windowLevel = UIWindowLevelAlert + 1;
+        UIAlertController *warningAlert = [UIAlertController alertControllerWithTitle:@"안내" message:@"오프라인 상태입니다. 네트워크의 연결을 확인해 주세요." preferredStyle:UIAlertControllerStyleAlert];
+        
+        [warningAlert addAction:[UIAlertAction actionWithTitle:@"확인" style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+            topWindow.hidden = YES;
+        }]];
+        
+        [topWindow makeKeyAndVisible];
+        [topWindow.rootViewController presentViewController:warningAlert animated:YES completion:nil];
+    }
+    
+}
+
+/**
+ 앱 버전 체크 후 업데이트 필요 시 사용자에게 업데이트를 요청하는 팝업 표현 메서드
+ */
+- (void) updatePopup
+{
+    NSLog(@"업데이트 필요!!!");
+    
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"새로운 버전 확인" message:@"팩트파인더 앱이 업데이트 되었습니다. \r\n최신 버전으로 업데이트 해 주세요." preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *storeAction = [UIAlertAction actionWithTitle:@"앱스토어로 이동" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+        [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://itunes.apple.com/us/app/factfinder-%ED%8C%A9%ED%8A%B8%ED%8C%8C%EC%9D%B8%EB%8D%94/id1341728893?mt=8?l=ko"]];
+    }];
+    UIAlertAction *closeAction = [UIAlertAction actionWithTitle:@"취소" style:UIAlertActionStyleDestructive handler:nil];
+    [alertController addAction:storeAction];
+    [alertController addAction:closeAction];
+    
+    //            [self presentViewController:alertController animated:YES completion:nil];
+    UIViewController *topController = [UIApplication sharedApplication].keyWindow.rootViewController;
+    while (topController.presentedViewController) {
+        topController = topController.presentedViewController;
+    }
+    
+    [topController presentViewController:alertController animated:YES completion:nil];
+}
+
+#pragma mark - iftCoreFramework(crawling)
+
+/**
+ 크롤링 시 신정원에서 데이터 받아오는 과정을 표현하는 메서드
+
+ @param notification 엔진 구동 시 생성되는 message
+ */
+- (void) iftCoreProgressChanged:(NSNotification *) notification
+{
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSString* message = notification.userInfo[iftCoreProgressKey];
+        NSLog(@"=====================================================");
+        NSLog(@"현재 진행상황 = %@", message);
+        if (message != nil) {
+//            [self.view makeToast:message duration:.5 position:CSToastPositionBottom];
+            [SVProgressHUD setStatus:message];
+        }
+    });
+}
+
+/**
+ 엔진 구동 시 현재 엔진에서 받아온 데이터를 표현하는 메서드
+
+ @param txt 엔진에서 받아온 json값
+ */
+- (void) addText: (NSString *) txt
+{
+    NSLog(@"결과 값 : %@", txt);
+}
+
+/**
+ 엔진 구동 시 errYN값이 Y일 경우 에러 메시지를 검출하는 메서드
+
+ @param txt errYN의 message값
+ */
+- (void) addText1: (NSString *) txt param:(NSDictionary *) errParam
+{
+    NSLog(@"결과 값 : %@", txt);
+    [[NSUserDefaults standardUserDefaults] setObject:@"error" forKey:@"errorFlag"];
+    
+    // 서버에서 에러코드 받는 ajax 구현 시 주석 풀고 테스트 진행
+    
+    [FFNetworkManager url:[NSString stringWithFormat:@"%@%@", [NSString api_baseURL], @"/insertErrorLog.ajax"]
+                parameter:errParam
+                  success:^(NSDictionary *data) {
+                      NSLog(@"data내용 : %@", [FFNetworkManager stringByReplacingUnicodePoint:data]);
+                      NSString *status = [data objectForKey:@"result"];
+                      if ([status isEqualToString:@"OK"]) {
+                          NSLog(@"에러 내용 서버 전달 완료");
+                          NSLog(@"에러 보여주는 팝업 띄움");
+                          [self deleteHUD1];
+                          [self.view makeToast:txt duration:3 position:CSToastPositionBottom];
+                          [_crawlingVC stopSpinner:txt];
+                      } else {
+                          NSLog(@"에러 내용 서버 전달 실패");
+                          NSLog(@"에러 보여주는 팝업 띄움(실패시에도 동작해야 함");
+                          [self deleteHUD1];
+                          [_crawlingVC stopSpinner:txt];
+                      }
+    } failure:^(NSError *error) {
+
+    }];
+}
+
+/**
+ 크롤링 후 가져온 결과 값을 팩트파인더 서버로 보내기 위한 메서드
+ 
+ ajax를 이용해 전체 json 값을 서버로 전송
+
+ @param txt 엔진을 사용하여 가져온 신정원 전체 결과 데이터
+ */
+- (void) resultCrawling: (NSString *) txt
+{
+//    [FFUtility showToastCompleteHandler:@"크롤링 완료!!!" :self];
+    /*
+     필요 파라미터
+     1. id
+     2. 고객이름
+     3. 사원코드
+     4. 고객 핸드폰번호
+     5. 고객 주민번호 앞자리
+     6. 고객 주민번호 뒷자리
+     7. 넘어온 string값
+     */
+    NSString *consultant_id = @"";
+    NSString *mb_id = @"";
+    NSString *screenInfo = [[NSUserDefaults standardUserDefaults] objectForKey:@"loginScreen"];
+    if ([screenInfo isEqualToString:@"기업고객"]) {
+        consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"empCode"];
+        mb_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"comCode"];
+    } else if ([screenInfo isEqualToString:@"개인고객"]) {
+        consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"userID"];
+        mb_id = @"NO_MB_ID";
+    }
+    NSString *userName = [[NSUserDefaults standardUserDefaults] objectForKey:@"userName"];
+    NSString *customer_hp = [[NSUserDefaults standardUserDefaults] objectForKey:@"userHpNum"];
+    NSString *customer_birth = [[NSUserDefaults standardUserDefaults] objectForKey:@"userSsn1"];
+    NSString *customer_identNum = [[NSUserDefaults standardUserDefaults] objectForKey:@"userSsn2"];
+    NSString *orgCD = [[NSUserDefaults standardUserDefaults] objectForKey:@"orgCD"];
+    NSString *rOrgCD = @"";
+    if ([orgCD isEqualToString:@"credit4u"]) {
+        rOrgCD = orgCD;
+    } else {
+        rOrgCD = @"insure";
+    }
+    NSString *customer_seq = [[NSUserDefaults standardUserDefaults] objectForKey:@"customer_seq"];
+    apiUrl = [NSString stringWithFormat:@"%@%@", [NSString api_baseURL], @"/policymng/resultJsonSave_for_ios.ajax"];
+    NSLog(@"보내는 URL = %@", apiUrl);
+    
+    NSString *slideGubun = @"";
+    if ([rOrgCD isEqualToString:@"credit4u"]) {
+        slideGubun = @"0";
+    } else {
+        slideGubun = @"2";
+    }
+    
+    NSDictionary *parameters = @{
+                                        @"consultant_id":consultant_id,
+                                        @"customer_name":userName,
+                                        @"mb_id":mb_id,
+                                        @"customer_phone":customer_hp,
+                                        @"customer_birth":customer_birth,
+                                        @"customer_identNum":customer_identNum,
+                                        @"customer_seq":customer_seq,
+                                        @"search_gubun":[NSString stringWithFormat:@"%@", rOrgCD],
+                                        @"json_string":txt
+                                        };
+    NSLog(@"전달되는 파라미터 값 = %@", parameters);
+    [FFNetworkManager url:apiUrl parameter:parameters
+                  success:^(NSDictionary *data) {
+                      [self deleteHUD1];
+                      NSLog(@"성공!!!");
+                      NSDictionary *resultString = [data objectForKey:@"result"];
+                      NSString *status = [resultString valueForKey:@"status"];
+                      if ([status isEqualToString:@"OK"]) {
+                          NSString *returnCId= [resultString valueForKey:@"consultant_id"];
+                          NSString *returnCSeq = [resultString valueForKey:@"customer_seq"];
+                          NSString *returnMbId = [resultString valueForKey:@"mb_id"];
+//                          NSString *goURL = [NSString stringWithFormat:@"%@/mobile/jquery_list.go?CUSTOMER_SEQ=%@&MB_ID=%@&CONSULTANT_ID=%@&MENU=ANALYSIS", [NSString api_baseURL], returnCSeq, returnMbId, returnCId];
+                          NSString *goURL = [NSString stringWithFormat:@"%@/mobile/jquery_body.go?MB_ID=%@&CONSULTANT_ID=%@&CUSTOMER_SEQ=%@&MENU=ANALYSIS&SLIDENUM=%@", [NSString api_baseURL], returnMbId, returnCId, returnCSeq, slideGubun];
+                          [[NSUserDefaults standardUserDefaults] setObject:goURL forKey:@"goListURL"];
+                      } else {
+                          NSString *err_msg = @"입력하신 값에 오류가 있습니다\n다시 시도해주세요";
+                          [_crawlingVC stopSpinner:err_msg];
+                      }
+                  } failure:^(NSError *error) {
+//                      [_crawlingVC stopSpinner];
+                      NSString *err_msg = @"서버와의 통신이 원활하지 않습니다\n다시 시도해주세요";
+                      [_crawlingVC stopSpinner:err_msg];
+                  }];
+}
+
+/**
+ 크롤링 진행 시 신정원에서 내려온 캡챠이미지를 디코딩하기 위해 필요한 메서드
+
+ @param hexString 신정원 캡챠이미지 데이터
+ @return 이미지 데이터
+ */
+- (NSData *) hexStringToData: (NSString *) hexString
+{
+    unsigned char whole_byte;
+    NSMutableData *returnData = [[NSMutableData alloc] init];
+    char byte_chars[3] = {'\0','\0','\0'};
+    int i;
+    for (i=0; i < [hexString length]/2; i++) {
+        byte_chars[0] = [hexString characterAtIndex:i*2];
+        byte_chars[1] = [hexString characterAtIndex:i*2+1];
+        whole_byte = strtol(byte_chars, NULL, 16);
+        [returnData appendBytes:&whole_byte length:1];
+    }
+    return (NSData *) returnData;
+}
+
+/**
+ 크롤링 화면에서 전체조회를 누르면 도달하는 메서드 (캡챠이미지 불러오는 메서드)
+
+ @param name 계약자 이름
+ @param ssnFront 계약자 주민번호 앞자리
+ @param ssnBack 계약자 주민번호 뒷자리
+ @param mobileNum 계약자 핸드폰번호
+ @param telComName 계약자 핸드폰의 통신사
+ */
+- (void) btn1Click:(NSString *)name
+                  :(NSString *)ssnFront
+                  :(NSString *)ssnBack
+                  :(NSString *)mobileNum
+                  :(NSString *)telComName
+                  :(NSString *)nationCD
+{
+    NSLog(@"조회 화면에서 넘어온 데이터 = name = %@, ssnFront = %@, ssnBack = %@, mobileNum = %@, telCom = %@", name, ssnFront, ssnBack, mobileNum, telComName);
+    [self showHUD1];
+    iftCoreEnV2 *engine = [[iftCoreEnV2 alloc] init];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSString *encodeName = [name stringByAddingPercentEscapesUsingEncoding:-2147481280];
+        
+        NSString *orgCD = [[NSUserDefaults standardUserDefaults] objectForKey:@"orgCD"];
+        NSString *genderInt = [ssnBack substringWithRange:NSMakeRange(0, 1)];
+        
+        NSString *juminFront = ssnFront;
+        NSString *juminBack = ssnBack;
+//        NSString *telComCD;
+//        if ([orgCD isEqualToString:@"credit4u"]) {
+//            telComCD = [[NSUserDefaults standardUserDefaults] valueForKey:@"TELCOM_RESULT"];
+//        } else {
+//            telComCD = [[NSUserDefaults standardUserDefaults] valueForKey:@"telComName"];
+//        }
+        
+        
+        NSLog(@"성별 = %@", genderInt);
+        NSLog(@"통신사 = %@", telComName);
+        
+        NSDictionary *appMaps = @{
+                                  @"devMode": @"R",
+                                  @"orgCd": orgCD, // 내보험 찾아줌일 땐 동적으로 변경되도록 지정
+                                  @"appCd": @"factfinder",
+                                  //@"svcCd":@"B0001,B1001,B2001",
+                                  @"svcCd":@"L0010",
+                                  @"userName":name,
+                                  @"userNameEUCKR":encodeName,
+                                  @"ssnFront":juminFront,
+                                  @"ssnBack":juminBack,
+                                  @"mobileCo":telComName,
+                                  @"gender":genderInt,
+                                  @"nationalInfo":nationCD,
+                                  @"mobileNo":mobileNum,
+                                  @"logLevel":@"D",
+                                  @"authType":@"mobile"
+                                  };
+        NSLog(@"크롤링 딕셔너리 정보 = %@", appMaps);
+        
+        NSString *ret = [engine startEngine:appMaps];
+        NSLog(@"정보 알려줘!!! = %@", ret);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSError *jsonError;
+            NSData *objectData = [ret dataUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:objectData options:NSJSONReadingMutableContainers error:&jsonError];
+            NSData *kData = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:nil];
+            
+            NSString *jString = [[NSString alloc] initWithData:kData encoding:NSUTF8StringEncoding];
+            NSLog(@"넘어온 데이터 정보 = %@", jString);
+            
+            if ([json[@"errYn"] isEqualToString:@"Y"]) {
+                NSString *consultant_id = @"";
+                NSString *mb_id = @"";
+                NSString *screenInfo = [[NSUserDefaults standardUserDefaults] objectForKey:@"loginScreen"];
+                if ([screenInfo isEqualToString:@"기업고객"]) {
+                    consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"empCode"];
+                    mb_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"comCode"];
+                } else if ([screenInfo isEqualToString:@"개인고객"]) {
+                    consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"userID"];
+                    mb_id = @"NO_MB_ID";
+                }
+                NSDictionary *errParam = @{
+                                           @"MB_ID":mb_id,
+                                           @"CONSULTANT_ID":consultant_id,
+                                           @"MOBILE_CO":telComName,
+                                           @"CUSTOMER_NM":name,
+                                           @"DEVICE_GUBUN":@"ios",
+                                           @"MOBILE_NO":mobileNum,
+                                           @"ERR_GUBUN":orgCD,
+                                           @"ERR_MSG":json [@"errMsg"]
+                                           };
+                [self deleteHUD1];
+                [self addText1:json [@"errMsg"] param:errParam];
+            }
+            
+            NSData *imagem = [self hexStringToData:json[@"captcha_img"]];
+            [[NSUserDefaults standardUserDefaults] setObject:imagem forKey:@"CaptcahImg"];
+//            // 이 부분에서 캡챠코드 이미지를 이미지뷰에 넘기는 코드 작성
+            [self deleteHUD1];
+            STPopupController *popupController = [[STPopupController alloc] initWithRootViewController:[FFCaptcahViewController new]];
+//            [popupController presentInViewController:self];
+            [popupController presentInViewController:self completion:nil];
+            
+            tnk_sr = json[@"tnk_sr"];
+            captcah = json[@"captcha"];
+            [[NSUserDefaults standardUserDefaults] setObject:tnk_sr forKey:@"tnk_sr"];
+            [[NSUserDefaults standardUserDefaults] setObject:captcah forKey:@"captcah"];
+            NSLog(@"============================================");
+            NSLog(@"결과1 = %@", tnk_sr);
+            NSLog(@"============================================");
+            NSLog(@"결과2 = %@", captcah);
+            NSLog(@"============================================");
+        });
+    });
+}
+
+/**
+ 캡챠이미지의 숫자를 입력 후 확인 버튼을 누르면 도달하는 메서드
+ 
+ 엔진에 요청을 하면 보안문자를 계약자 핸드폰번호로 전송
+
+ @param name 계약자 이름
+ @param ssnFront 계약자 주민번호 앞자리
+ @param ssnBack 계약자 주민번호 뒷자리
+ @param mobileNum 계약자 핸드폰번호
+ @param telComName 계약자 핸드폰의 통신사
+ @param captcahNum 입력한 캡챠코드 번호
+ */
+- (void) btn2Click:(NSString *)name
+                  :(NSString *)ssnFront
+                  :(NSString *)ssnBack
+                  :(NSString *)mobileNum
+                  :(NSString *)telComName
+                  :(NSString *)captcahNum
+                  :(NSString *)nationCD
+{
+    [self showHUD1];
+    iftCoreEnV2 *engine = [[iftCoreEnV2 alloc] init];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        NSString *encodeName = [name stringByAddingPercentEscapesUsingEncoding:-2147481280];
+        NSLog(@"전달된 값 = %@, %@, %@, %@, %@, %@", name, ssnFront, ssnBack, mobileNum, telComName, captcahNum);
+        NSString *orgCD = [[NSUserDefaults standardUserDefaults] objectForKey:@"orgCD"];
+        NSString *genderInt = [ssnBack substringWithRange:NSMakeRange(0, 1)];
+        
+        NSString *juminFront = ssnFront;
+        NSString *juminBack = ssnBack;
+        
+        NSString *captcahCd = captcahNum;
+        
+        tnk_sr = [[NSUserDefaults standardUserDefaults] objectForKey:@"tnk_sr"];
+        captcah = [[NSUserDefaults standardUserDefaults] objectForKey:@"captcah"];
+        NSLog(@"tnk_sr 값 = %@", tnk_sr);
+        NSLog(@"captcah 값 = %@", captcah);
+        
+        NSDictionary *appMaps = @{
+                                  @"devMode": @"R",
+                                  @"orgCd": orgCD,
+                                  @"appCd": @"factfinder",
+                                  @"svcCd":@"L0020",
+                                  @"userName":name,
+                                  @"userNameEUCKR":encodeName,
+                                  @"ssnFront":juminFront,
+                                  @"ssnBack":juminBack,
+                                  @"mobileCo":telComName,
+                                  @"gender":genderInt, 
+                                  @"nationalInfo":nationCD,
+                                  @"mobileNo":mobileNum,
+                                  @"tnk_sr":tnk_sr,
+                                  @"captcha":captcah,
+                                  @"answer":captcahCd,
+                                  @"logLevel":@"D",
+                                  @"authType":@"mobile"
+                                  };
+        NSLog(@"파라미터 값 = %@", appMaps);
+        
+        NSString *ret = [engine startEngine:appMaps];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSError *jsonError;
+            NSData *objectData = [ret dataUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:objectData
+                                                                 options:NSJSONReadingMutableContainers
+                                                                   error:&jsonError];
+            NSData* kData = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:nil];
+            
+            NSString * jString = [[NSString alloc] initWithData:kData   encoding:NSUTF8StringEncoding];
+            NSLog(@"넘어온 데이터 정보 = %@", jString);
+            
+            if ([json[@"errYn"] isEqualToString:@"Y"]) {
+                NSString *consultant_id = @"";
+                NSString *mb_id = @"";
+                NSString *screenInfo = [[NSUserDefaults standardUserDefaults] objectForKey:@"loginScreen"];
+                if ([screenInfo isEqualToString:@"기업고객"]) {
+                    consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"empCode"];
+                    mb_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"comCode"];
+                } else if ([screenInfo isEqualToString:@"개인고객"]) {
+                    consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"userID"];
+                    mb_id = @"NO_MB_ID";
+                }
+                NSDictionary *errParam = @{
+                                           @"MB_ID":mb_id,
+                                           @"CONSULTANT_ID":consultant_id,
+                                           @"MOBILE_CO":telComName,
+                                           @"CUSTOMER_NM":name,
+                                           @"DEVICE_GUBUN":@"ios",
+                                           @"MOBILE_NO":mobileNum,
+                                           @"ERR_GUBUN":orgCD,
+                                           @"ERR_MSG":json [@"errMsg"]
+                                           };
+                [self deleteHUD1];
+                [self addText1:json [@"errMsg"] param:errParam];
+            } else {
+                // crawlingVC에서 팝업 띄우도록 설정
+                [_crawlingVC setCertPopup];
+            }
+            
+            [self addText : ret];
+            NSLog(@"json Dictionary 값 = %@", json);
+            NSDictionary *tempResult = json[@"inJson"];
+            NSString *tnk_sr1 = tempResult[@"tnk_sr"];
+            tnk_sr = tnk_sr1;
+            captcah = [[NSUserDefaults standardUserDefaults] objectForKey:@"captcah"];
+            NSLog(@"tnk_sr, captcah 값 = %@, %@", tnk_sr1, captcah);
+            [[NSUserDefaults standardUserDefaults] setObject:tnk_sr forKey:@"tnk_sr"];
+            
+            NSLog(@"============================================");
+            NSLog(@"결과1 = %@", tnk_sr);
+            NSLog(@"============================================");
+            NSLog(@"결과2 = %@", captcah);
+            NSLog(@"============================================");
+        });
+    });
+}
+
+/**
+ 보안문자 입력하는 팝업에서 확인 버튼을 누르면 동작하는 메서드
+ 
+ 문자 입력 후 확인을 누르면 해당 서비스(내보험 다보여, 내보험 찾아줌)의 내용을 크롤링하여 json 값으로 내려줌
+
+ @param name 계약자 이름
+ @param ssnFront 계약자 주민번호 앞자리
+ @param ssnBack 계약자 주민번호 뒷자리
+ @param mobileNum 계약자 핸드폰번호
+ @param telComName 계약자 핸드폰의 통신사
+ @param smsResult 보안문자 입력 값
+ */
+- (void) btn3Click:(NSString *)name
+                  :(NSString *)ssnFront
+                  :(NSString *)ssnBack
+                  :(NSString *)mobileNum
+                  :(NSString *)telComName
+                  :(NSString *)smsResult
+                  :(NSString *)nationCD
+{
+    iftCoreEnV2 *engine = [[iftCoreEnV2 alloc] init];
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT,0), ^{
+        
+        NSLog(@"전달된 값 = %@, %@, %@, %@, %@, %@", name, ssnFront, ssnBack, mobileNum, telComName, smsResult);
+        NSString *encodeName = [name stringByAddingPercentEscapesUsingEncoding:-2147481280];
+        
+        NSString *orgCD = [[NSUserDefaults standardUserDefaults] objectForKey:@"orgCD"];
+        NSString *genderInt = [ssnBack substringWithRange:NSMakeRange(0, 1)];
+        
+        NSString *juminFront = ssnFront;
+        NSString *juminBack = ssnBack;
+        
+        NSString *smsNum = smsResult;
+        
+        tnk_sr = [[NSUserDefaults standardUserDefaults] objectForKey:@"tnk_sr"];
+        captcah = [[NSUserDefaults standardUserDefaults] objectForKey:@"captcah"];
+        NSLog(@"tnk_sr 값 = %@", tnk_sr);
+        NSLog(@"captcah 값 = %@", captcah);
+        NSDictionary *appMaps;
+        if (![orgCD isEqualToString:@"credit4u"]) {
+            appMaps = @{
+                                      @"devMode": @"R",
+                                      @"orgCd": orgCD,
+                                      @"appCd": @"factfinder",
+                                      @"svcCd":@"B0001",
+                                      @"userName":name,
+                                      @"userNameEUCKR":encodeName,
+                                      @"ssnFront":juminFront,
+                                      @"ssnBack":juminBack,
+                                      @"mobileCo":telComName,
+                                      @"gender":genderInt,
+                                      @"nationalInfo":nationCD,
+                                      @"mobileNo":mobileNum,
+                                      @"tnk_sr":tnk_sr,
+                                      @"captcha":captcah,
+                                      @"logLevel":@"D",
+                                      @"SMS":smsNum,
+                                      @"authType":@"mobile"
+                                      };
+        } else {
+            appMaps = @{
+                                  @"devMode": @"R",
+                                  @"orgCd": orgCD,
+                                  @"appCd": @"factfinder",
+                                  @"svcCd":@"B0001,B1001,B2001",
+                                  @"userName":name,
+                                  @"userNameEUCKR":encodeName,
+                                  @"ssnFront":juminFront,
+                                  @"ssnBack":juminBack,
+                                  @"mobileCo":telComName,
+                                  @"gender":genderInt,
+                                  @"nationalInfo":nationCD,
+                                  @"mobileNo":mobileNum,
+                                  @"tnk_sr":tnk_sr,
+                                  @"captcha":captcah,
+                                  @"logLevel":@"D",
+                                  @"SMS":smsNum,
+                                  @"authType":@"mobile"
+                                  };
+        }
+        NSString *ret = [engine startEngine: appMaps];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSError *jsonError;
+            NSData *objectData = [ret dataUsingEncoding:NSUTF8StringEncoding];
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:objectData
+                                                                 options:NSJSONReadingMutableContainers
+                                                                   error:&jsonError];
+            NSData* kData = [NSJSONSerialization dataWithJSONObject:json options:NSJSONWritingPrettyPrinted error:nil];
+            
+            NSString * jString = [[NSString alloc] initWithData:kData   encoding:NSUTF8StringEncoding];
+            
+            NSLog(@"전달된 크롤링 값 : %@", jString);
+            
+            if ([json[@"errYn"] isEqualToString:@"Y"]) {
+                NSString *consultant_id = @"";
+                NSString *mb_id = @"";
+                NSString *screenInfo = [[NSUserDefaults standardUserDefaults] objectForKey:@"loginScreen"];
+                if ([screenInfo isEqualToString:@"기업고객"]) {
+                    consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"empCode"];
+                    mb_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"comCode"];
+                } else if ([screenInfo isEqualToString:@"개인고객"]) {
+                    consultant_id = [[NSUserDefaults standardUserDefaults] objectForKey:@"userID"];
+                    mb_id = @"NO_MB_ID";
+                }
+                NSDictionary *errParam = @{
+                                           @"MB_ID":mb_id,
+                                           @"CONSULTANT_ID":consultant_id,
+                                           @"MOBILE_CO":telComName,
+                                           @"CUSTOMER_NM":name,
+                                           @"DEVICE_GUBUN":@"ios",
+                                           @"MOBILE_NO":mobileNum,
+                                           @"ERR_GUBUN":orgCD,
+                                           @"ERR_MSG":json [@"errMsg"]
+                                           };
+                [self deleteHUD1];
+                [self addText1:json [@"errMsg"] param:errParam];
+            } else {
+                [self addText : ret];
+                [self resultCrawling: ret];
+            }
+        });
+    });
+}
+
+#pragma mark - Setter
+/**
+ 자식ViewController의 화면 구성 시 네비게이션 바를 설정하는 메서드
+
+ @param cb_hasNavigationBar YES/NO
+ */
+- (void) setFf_hasNavigationBar:(BOOL)cb_hasNavigationBar
+{
+    _ff_hasNavigationBar = cb_hasNavigationBar;
+    _ff_navigationBar.hidden = !_ff_hasNavigationBar;
+    _ff_navigationBar.userInteractionEnabled = _ff_hasNavigationBar;
+}
+
+#pragma mark - Getter
+/**
+ 캡챠코드 요청(btn1Click)메서드에서 리턴된 이미지 데이터를 임시 저장하는 메서드
+
+ @param img 캡챠코드 이미지
+ @return 캡챠코드 이미지
+ 
+ 단순 리피터 역할
+ */
+- (NSData *) getImgData :(NSData *) img
+{
+    return img;
+}
+
+/**
+ 고객정보 활용동의 시 서버에서 받아온 sms시퀀스를 임시저장하는 메서드
+
+ @param seq sms전송 시 받아오는 시퀀스
+ */
+- (void) saveSequence: (NSString *)seq
+{
+    NSLog(@"넘어온 값 : %@", seq);
+    [[NSUserDefaults standardUserDefaults] setValue:seq forKey:@"smsSeq"];
+}
+
+/**
+ 고객정보 활용동의의 사인동의 시 서버에서 받아온 index값을 임시 저장하는 메서드
+
+ @param idx 사인동의 시 받아오는 시퀀스
+ */
+- (void) saveIndex: (NSString *)idx
+{
+    NSLog(@"넘어온 값 : %@", idx);
+    [[NSUserDefaults standardUserDefaults] setValue:idx forKey:@"signIdx"];
+}
+
+/**
+ 고객정보 활용동의 시 받아온 시퀀스를 요청 시 전달해주는 getter메서드
+
+ @return 저장된 seq값
+ */
+- (NSString *) getSequence
+{
+    _saveSEQ = [[NSUserDefaults standardUserDefaults] valueForKey:@"smsSeq"];
+    NSLog(@"저장된 값 : %@", _saveSEQ);
+    return _saveSEQ;
+}
+
+/**
+ 고객정보 활용동의 시 받아온 인덱스를 요청 시 전달해주는 getter 메서드
+
+ @return 저장된 idx값
+ */
+- (NSString *) getIndex
+{
+    _saveIDX = [[NSUserDefaults standardUserDefaults] valueForKey:@"signIdx"];
+    NSLog(@"저장된 값 : %@", _saveIDX);
+    return _saveIDX;
+}
+
+@end

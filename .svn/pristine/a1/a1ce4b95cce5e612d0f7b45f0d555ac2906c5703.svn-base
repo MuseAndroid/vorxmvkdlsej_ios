@@ -1,0 +1,262 @@
+//
+//  FFIntroViewController.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFIntroViewController.h"
+
+// Utility
+#import "FFUtility.h"
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+
+// ViewController
+#import "FFLoginViewController.h"
+#import "FFMainWebViewController.h"
+
+// Manager
+#import "FFNetworkManager.h"
+
+// Library
+#import <Masonry/Masonry.h>
+#import <sys/utsname.h>
+
+@import FirebaseInstanceID;
+@import FirebaseMessaging;
+
+
+@interface FFIntroViewController ()
+
+@property (strong, nonatomic) UIImageView *splashImageView;
+@property (strong, nonatomic) UIImageView *intro_logo;
+@property (strong, nonatomic) UIImageView *top_logo;
+@property (nonatomic) NSTimer *timer;
+@property (nonatomic) NSTimer *timerDefault;
+@property (nonatomic) NSString *comCd;
+@property (nonatomic) NSString *empCd;
+@property (nonatomic) NSString *empPw;
+@property (nonatomic) NSString *userId;
+@property (nonatomic) NSString *userPw;
+@property (nonatomic) NSString *deviceToken;
+
+@end
+
+@implementation FFIntroViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self preferredStatusBarStyle];
+    
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"goListURL"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"signIdx"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"TELCOM_RESULT"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"popupUserData"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"popupUserData1"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"popupUserData2"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"loginParam"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"comCode"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"empCode"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"userCode"];
+    [[NSUserDefaults standardUserDefaults] setObject:@"" forKey:@"userID"];
+    
+    NSString *machineName = [self deviceName];
+    NSLog(@"기기 모델명 = %@", machineName);
+    NSString *iPADYN = [machineName substringWithRange:NSMakeRange(0,4)];
+    NSLog(@"아이패드니??? - %@", iPADYN);
+    
+    _deviceToken = [[NSUserDefaults standardUserDefaults] valueForKey:@"deviceToken"];
+    if ([_deviceToken length] != 0) {
+        // 로그인 이력 조회 api(searchLoginInfo) 조회 후 실행되어야 함.
+//        [self timeInterval:@"false"];
+        [self checkAutoLogin];
+    } else {
+        [self timeInterval1];
+    }
+    
+    if ([iPADYN isEqualToString:@"iPad"] || [machineName isEqualToString:@"x86_64"]) {
+        _splashImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intro_2"]];
+    } else {
+        _splashImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intro_1"]];
+    }
+    _top_logo = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"logo_intro"]];
+    _intro_logo = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"intro_txt"]];
+    
+    [_splashImageView addSubview:_top_logo];
+    [_splashImageView addSubview:_intro_logo];
+    [self.view addSubview:_splashImageView];
+    [self makeConstraints];
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_splashImageView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.edges.equalTo(self.view);
+    }];
+    
+    [_top_logo mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(self.view).with.offset(200.f);
+        make.centerX.equalTo(self.view);
+        make.width.equalTo(@140.f);
+        make.height.equalTo(@24.f);
+    }];
+    
+    [_intro_logo mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerX.equalTo(self.view);
+        make.top.equalTo(_top_logo.mas_bottom).with.offset(20.f);
+        make.width.equalTo(@270.f);
+        make.height.equalTo(@250.f);
+    }];
+}
+
+/**
+ 자동로그인 체크 메서드
+ 필수 파라미터
+ 1. 디바이스 종류 (안드로이드 : and, 아이폰 : ios)
+ 2. 디바이스 토큰 (firebase를 이용한 deviceToken 생성 값)
+ 리턴 값
+ key : result
+ value : OK(자동로그인 O) | NO(자동로그인 X)
+ */
+- (void) checkAutoLogin
+{
+    NSString *gubun_code = @"ios";
+    
+    NSDictionary *parameters = @{
+                                @"device_gubun":gubun_code,
+                                @"device_id":_deviceToken
+                                   };
+    NSLog(@"파라미터 값 : %@", parameters);
+        [FFNetworkManager url:[NSString stringWithFormat:@"%@%@", [NSString api_baseURL], @"/checkMobileLogin.ajax"] parameter:parameters success:^(NSDictionary *data) {
+            if (![data isEqual:nil]) {
+                NSLog(@"factfinder - 자동로그인 여부 확인 값 = %@", [self stringByReplacingUnicodePoint:data]);
+                NSString *chkAutoLogin = [NSString stringWithFormat:@"%@", [data valueForKey:@"auto_login"]];
+                if (![chkAutoLogin isEqualToString:@"0"]) {
+                    // 자동로그인 OK
+                    if (![[[NSUserDefaults standardUserDefaults] stringForKey:@"comCd"] isEqual:@"NO_MB_ID"])
+                     {
+                     _comCd = [[NSUserDefaults standardUserDefaults] stringForKey:@"comCd"];
+                     NSLog(@"factfinder - 저장된 회사코드 = %@", _comCd);
+                     }
+                     
+                     if (![[[NSUserDefaults standardUserDefaults] stringForKey:@"empCd"] isEqual:nil])
+                     {
+                     _empCd = [[NSUserDefaults standardUserDefaults] stringForKey:@"empCd"];
+                     NSLog(@"factfinder - 저장된 사원코드 = %@", _empCd);
+                     }
+                     
+                     if (![[[NSUserDefaults standardUserDefaults] stringForKey:@"empPw"] isEqual:nil])
+                     {
+                     _empPw = [[NSUserDefaults standardUserDefaults] stringForKey:@"empPw"];
+                     NSLog(@"factfinder - 저장된 사원비번 = %@", _empPw);
+                     }
+                     
+                     if (![[[NSUserDefaults standardUserDefaults] stringForKey:@"userId"] isEqual:nil])
+                     {
+                     _userId = [[NSUserDefaults standardUserDefaults] stringForKey:@"userId"];
+                     NSLog(@"factfinder - 저장된 개인아이디 = %@", _userId);
+                     }
+                     
+                     if (![[[NSUserDefaults standardUserDefaults] stringForKey:@"userPw"] isEqual:nil])
+                     {
+                     _userPw = [[NSUserDefaults standardUserDefaults] stringForKey:@"userPw"];
+                     NSLog(@"factfinder - 저장된 개인비밀번호 = %@", _userPw);
+                     }
+                     if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"loginScreen"] isEqualToString:@"기업고객"]) {
+                        NSDictionary *mainComParam = @{
+                                                @"mb_id":_comCd,
+                                                @"consultant_id":_empCd,
+                                                @"password":_empPw
+                                                };
+                        [self changeMainView: mainComParam];
+                    } else {
+                        NSDictionary *mainUserParam = @{
+                                                       @"mb_id":@"NO_MB_ID",
+                                                       @"consultant_id":_userId,
+                                                       @"password":_userPw
+                                                       };
+                        [self changeMainView: mainUserParam];
+                    }
+                    
+                } else {
+                    // 자동로그인 false
+                    [self timeInterval:chkAutoLogin];
+                }
+            }
+
+        } failure:^(NSError *error) {
+
+        }];
+//    [self timeInterval];
+}
+
+
+/**
+ 일정 시간이 지난 뒤 동작되는 메서드
+ 인트로 화면이 3초 유지되어야 하는 구조로 인해 timer를 사용해 자동으로 넘어가도록 설정
+ (추후 서버에서 내려온 결과값을 파라미터로 태울 예정)
+ */
+- (void) timeInterval:(NSString *)result
+//- (void) timeInterval
+{
+    if ([result isEqualToString:@"OK"]) {
+        _timer = [NSTimer scheduledTimerWithTimeInterval:3.0f target:self selector:@selector(changeMainView) userInfo:nil repeats:NO];
+    } else {
+        _timer = [NSTimer scheduledTimerWithTimeInterval:3.0f target:self selector:@selector(changeView) userInfo:nil repeats:NO];
+    }
+//    _timer = [NSTimer scheduledTimerWithTimeInterval:3.0f target:self selector:@selector(checkAutoLogin) userInfo:nil repeats:NO];
+//    _timer = [NSTimer scheduledTimerWithTimeInterval:3.0f target:self selector:@selector(changeView) userInfo:nil repeats:NO];
+}
+
+- (void) timeInterval1
+{
+    _timerDefault = [NSTimer scheduledTimerWithTimeInterval:3.0f target:self selector:@selector(changeView) userInfo:nil repeats:NO];
+}
+
+/**
+ 자동로그인 OK일 때 이동
+ 메인 웹뷰 페이지로 이동하는 메서드
+ (기능 구현 예정)
+ */
+- (void) changeMainView :(NSDictionary *)autoLoginParam
+{
+    FFMainWebViewController *mainWebViewController = [[FFMainWebViewController alloc] initWithParameter:autoLoginParam];
+    [FFUtility goMain:autoLoginParam :mainWebViewController];
+}
+
+/**
+ 자동로그인 NO일 때 이동
+ 로그인 화면으로 이동하는 메서드
+ */
+- (void) changeView
+{
+    FFLoginViewController *loginViewController = [[FFLoginViewController alloc] init];
+    [FFUtility goHome:loginViewController];
+}
+
+- (NSString *)deviceName
+{
+    struct utsname systemInfo;
+    uname(&systemInfo);
+    
+    return [NSString stringWithCString:systemInfo.machine encoding:NSUTF8StringEncoding];
+}
+
+/**
+ 서버에서 전달된 json값을 utf-8로 인코딩하여 로그에서 볼 수 있도록 해주는 메서드
+
+ @param jsonObj : 서버에서 온 파라미터
+ @return : utf-8로 변환된 json 내용
+ */
+- (NSString *)stringByReplacingUnicodePoint:(id)jsonObj
+{
+    NSData *data = [NSJSONSerialization dataWithJSONObject:jsonObj options:0 error:nil];
+    NSString *result = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    return result;
+}
+
+@end

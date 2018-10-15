@@ -1,0 +1,130 @@
+//
+//  FFCaptcahViewController.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 4.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFCaptcahViewController.h"
+
+// View
+#import "FFCaptcahView.h"
+
+// ViewController
+#import "FFCertViewController.h"
+#import "FFCrawlingViewController.h"
+
+// Utility
+#import "UIColor+FFExtention.h"
+#import "UIFont+FFExtention.h"
+
+// Library
+#import <STPopup/STPopup.h>
+
+@interface FFCaptcahViewController ()
+
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) FFCaptcahView *captcahView;
+@property (strong, nonatomic) FFCrawlingViewController *crawlingVC;
+@property (nonatomic) NSTimer *closeTimer;
+
+@end
+
+@implementation FFCaptcahViewController
+
+- (instancetype) init
+{
+    self = [super init];
+    if (self) {
+        self.title = @"보안문자확인";
+        self.contentSizeInPopup = CGSizeMake(300, 160);
+        self.landscapeContentSizeInPopup = CGSizeMake(300, 160);
+        [STPopupNavigationBar appearance].barTintColor = [UIColor ff_c1Color];
+        [STPopupNavigationBar appearance].tintColor = [UIColor whiteColor];
+        [STPopupNavigationBar appearance].titleTextAttributes= @{ NSFontAttributeName: [UIFont appleSDGothicNeoMediumWithSize:14.f],
+                                                                  NSForegroundColorAttributeName: [UIColor ff_c5Color]};
+        [STPopupNavigationBar appearance].barStyle = UIBarStyleDefault;
+        
+        [[UIBarButtonItem appearanceWhenContainedIn:[STPopupNavigationBar class], nil]
+         setTitleTextAttributes:@{ NSFontAttributeName: [UIFont appleSDGothicNeoMediumWithSize:14.f],
+                                   NSForegroundColorAttributeName: [UIColor ff_c5Color]} forState:UIControlStateNormal];
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [UIColor ff_c5Color];
+    
+    _crawlingVC = [[FFCrawlingViewController alloc] init];
+    
+    NSData *captcah = [[NSUserDefaults standardUserDefaults] objectForKey:@"CaptcahImg"];
+    
+    __weak typeof(self) weakSelf = self;
+    
+    _contentContainer = [[UIView alloc] init];
+    _contentContainer.backgroundColor = [UIColor clearColor];
+    
+    _captcahView = [[FFCaptcahView alloc] init];
+    [_captcahView setCapchaImage:captcah];
+    _captcahView.confirmHandler = ^{
+        [weakSelf certViewRise];
+    };
+    
+    [_contentContainer addSubview:_captcahView];
+    [self.view addSubview:_contentContainer];
+    
+    [self makeConstraints];
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(@.0);
+        make.left.equalTo(@.0f);
+        make.right.equalTo(@.0f);
+        make.bottom.equalTo(@.0f);
+    }];
+    
+    [_captcahView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentContainer.mas_top).with.offset(5.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.bottom.equalTo(_contentContainer.mas_bottom).with.offset(-5.f);
+    }];
+}
+
+- (void)viewWillAppear:(BOOL)animated
+{
+    NSString *resultURL = [[NSUserDefaults standardUserDefaults] objectForKey:@"goListURL"];
+    if ([resultURL length] != 0) {
+//        [self closePage];
+    }
+}
+
+- (void) certViewRise // 테스트 위해 임시로 팝업에 이벤트 연결  실제는 ViewController에 Btn2Click 메서드에 연결해야 함
+{
+    NSString *userName = [[NSUserDefaults standardUserDefaults] objectForKey:@"userName"];
+    NSString *userSsn1 = [[NSUserDefaults standardUserDefaults] objectForKey:@"userSsn1"];
+    NSString *userSsn2 = [[NSUserDefaults standardUserDefaults] objectForKey:@"userSsn2"];
+    NSString *userHpNum = [[NSUserDefaults standardUserDefaults] objectForKey:@"userHpNum"];
+    NSString *telComName1 = [[NSUserDefaults standardUserDefaults] objectForKey:@"telComName"];
+    NSString *nationCD = [[NSUserDefaults standardUserDefaults] objectForKey:@"nationCode"];
+    NSString *confirmTxt = [_captcahView confirmTxt];
+    NSLog(@"캡챠코드 값 = %@", confirmTxt);
+
+    [self btn2Click:userName :userSsn1 :userSsn2 :userHpNum :telComName1 :confirmTxt: nationCD];
+    
+    [self closePage];
+}
+
+- (void) closePage
+{
+    NSLog(@"도착했니???");
+    [self dismissViewControllerAnimated:NO completion:nil];
+}
+
+@end

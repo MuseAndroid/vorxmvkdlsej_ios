@@ -1,0 +1,297 @@
+//
+//  FFPersonalLoginView.m
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 5.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFPersonalLoginView.h"
+
+// Utility
+#import "UIFont+FFExtention.h"
+#import "UIColor+FFExtention.h"
+
+@interface FFPersonalLoginView() <UITextFieldDelegate>
+
+@property (strong, nonatomic) UIView *contentContainer;
+@property (strong, nonatomic) UIView *userIdView;
+@property (strong, nonatomic) UIView *userPwView;
+@property (strong, nonatomic) UIImageView *userIdImg;
+@property (strong, nonatomic) UIImageView *userPwImg;
+@property (strong, nonatomic) UIButton *findID; // 아이디찾기
+@property (strong, nonatomic) UIButton *findPW; // 비밀번호 찾기
+@property (strong, nonatomic) UIImageView *betweenLine; // 사이 바
+@property (strong, nonatomic) UIButton *joinFF; // 회원가입
+
+@end
+
+@implementation FFPersonalLoginView
+
+- (instancetype) init
+{
+    self = [super init];
+    if (self) {
+        CGFloat newAlpha = 0.25f;
+        
+        _contentContainer = [[UIView alloc] init];
+        _contentContainer.backgroundColor = [UIColor clearColor];
+        
+        _userIdView = [[UIView alloc] init];
+        _userIdView.backgroundColor = [UIColor ff_c5Color];
+        CGColorRef color1 = CGColorCreateCopyWithAlpha(_userIdView.layer.backgroundColor, newAlpha);
+        [_userIdView.layer setBackgroundColor:color1];
+        
+        _userPwView = [[UIView alloc] init];
+        _userPwView.backgroundColor = [UIColor ff_c5Color];
+        CGColorRef color2 = CGColorCreateCopyWithAlpha(_userPwView.layer.backgroundColor, newAlpha);
+        [_userPwView.layer setBackgroundColor:color2];
+        
+        _userIdImg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"cust_title_img"]];
+        _userPwImg = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"passwd_title_img"]];
+        
+        _userIdTxtField = [[FFTextField alloc] init];
+        _userIdTxtField.backgroundColor = [UIColor clearColor];
+        _userIdTxtField.delegate = self;
+        _userIdTxtField.layer.borderColor = [UIColor clearColor].CGColor;
+        _userIdTxtField.textColor = [UIColor whiteColor];
+        _userIdTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:15.f];
+        _userIdTxtField.placeholder = @"아이디";
+        _userIdTxtField.keyboardType = UIKeyboardTypeEmailAddress;
+        _userIdTxtField.returnKeyType = UIReturnKeyNext;
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:@"userID"]) {
+            _userIdTxtField.text = [[NSUserDefaults standardUserDefaults] objectForKey:@"userID"];
+        } else {
+            if ([[NSUserDefaults standardUserDefaults] objectForKey:@"secondaryUserID"]) {
+                _userIdTxtField.text = [[NSUserDefaults standardUserDefaults] objectForKey:@"secondaryUserID"];
+            }
+        }
+        
+        _userPwTxtField = [[FFTextField alloc] init];
+        _userPwTxtField.backgroundColor = [UIColor clearColor];
+        _userPwTxtField.delegate = self;
+        _userPwTxtField.textColor = [UIColor whiteColor];
+        _userPwTxtField.secureTextEntry = YES;
+        _userPwTxtField.font = [UIFont appleSDGothicNeoMediumWithSize:15.f];
+        _userPwTxtField.layer.borderColor = [UIColor clearColor].CGColor;
+        _userPwTxtField.placeholder = @"비밀번호";
+        
+        _submitUserLogin = [[UIButton alloc] init];
+        _submitUserLogin.clipsToBounds = YES;
+        _submitUserLogin.backgroundColor = [UIColor ff_c14Color];
+        _submitUserLogin.layer.cornerRadius = 5.f;
+        _submitUserLogin.titleLabel.font=[UIFont boldSystemFontOfSize:20.f];
+        _submitUserLogin.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+        [_submitUserLogin setTitle:@"로그인" forState:UIControlStateNormal];
+        [_submitUserLogin setTitleColor:[UIColor ff_c15Color] forState:UIControlStateNormal];
+        [_submitUserLogin addTarget:self action:@selector(goUserLogin:) forControlEvents:UIControlEventTouchUpInside];
+        
+        _findID = [[UIButton alloc] init];
+        _findID.titleLabel.font=[UIFont boldSystemFontOfSize:13.f];
+        _findID.backgroundColor = [UIColor clearColor];
+        _findID.clipsToBounds = YES;
+        _findID.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+        [_findID setTitle:@"아이디찾기" forState:UIControlStateNormal];
+        [_findID setTitleColor:[UIColor ff_c5Color] forState:UIControlStateNormal];
+        [_findID addTarget:self action:@selector(findUserID:) forControlEvents:UIControlEventTouchUpInside];
+        
+        _betweenLine = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"login_line"]];
+        
+        _findPW = [[UIButton alloc] init];
+        _findPW.titleLabel.font=[UIFont boldSystemFontOfSize:13.f];
+        _findPW.backgroundColor = [UIColor clearColor];
+        _findPW.clipsToBounds = YES;
+        _findPW.contentHorizontalAlignment = UIControlContentHorizontalAlignmentCenter;
+        [_findPW setTitle:@"비밀번호찾기" forState:UIControlStateNormal];
+        [_findPW setTitleColor:[UIColor ff_c5Color] forState:UIControlStateNormal];
+        [_findPW addTarget:self action:@selector(findUserPW:) forControlEvents:UIControlEventTouchUpInside];
+        
+        _joinFF = [[UIButton alloc] init];
+        _joinFF.titleLabel.font = [UIFont boldSystemFontOfSize:13.f];
+        _joinFF.backgroundColor = [UIColor clearColor];
+        _joinFF.clipsToBounds = YES;
+        _joinFF.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight;
+        [_joinFF setTitle:@"회원가입" forState:UIControlStateNormal];
+        [_joinFF setTitleColor:[UIColor ff_c2Color] forState:UIControlStateNormal];
+        [_joinFF addTarget:self action:@selector(goJoinPage:) forControlEvents:UIControlEventTouchUpInside];
+        
+        
+        [_userIdView addSubview:_userIdImg];
+        [_userIdView addSubview:_userIdTxtField];
+        [_userPwView addSubview:_userPwImg];
+        [_userPwView addSubview:_userPwTxtField];
+        [_contentContainer addSubview:_userIdView];
+        [_contentContainer addSubview:_userPwView];
+        [_contentContainer addSubview:_submitUserLogin];
+        [_contentContainer addSubview:_findID];
+        [_contentContainer addSubview:_betweenLine];
+        [_contentContainer addSubview:_findPW];
+        [_contentContainer addSubview:_joinFF];
+        
+        [self addSubview:_contentContainer];
+        
+        [self makeConstraints];
+    }
+    return self;
+}
+
+- (void) makeConstraints
+{
+    [super makeConstraints];
+    [_contentContainer mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.and.bottom.equalTo(@.0f);
+        make.left.equalTo(@5.f);
+        make.right.equalTo((@-5.f));
+    }];
+    
+    [_userIdView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_contentContainer.mas_top).with.offset(5.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_userPwView mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_userIdView.mas_bottom).with.offset(1.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_userIdImg mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_userIdView);
+        make.left.equalTo(_userIdView.mas_left).with.offset(10.f);
+        make.width.equalTo(@40.f);
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_userIdTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_userIdView);
+        make.left.equalTo(_userIdImg.mas_right).with.offset(10.f);
+        make.right.equalTo(_userIdView.mas_right);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_userPwImg mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_userPwView);
+        make.left.equalTo(_userPwView.mas_left).with.offset(10.f);
+        make.width.equalTo(@40.f);
+        make.height.equalTo(@40.f);
+    }];
+    
+    [_userPwTxtField mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.centerY.equalTo(_userPwView.mas_centerY);
+        make.left.equalTo(_userPwImg.mas_right).with.offset(10.f);
+        make.right.equalTo(_userPwView.mas_right);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_submitUserLogin mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_userPwView.mas_bottom).with.offset(10.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(5.f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-5.f);
+        make.height.equalTo(@50.f);
+    }];
+    
+    [_findID mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_submitUserLogin.mas_bottom).with.offset(10.f);
+        make.centerX.equalTo(_contentContainer.mas_centerX).with.offset(-45.f);
+        make.width.equalTo(@60.f);
+        make.height.equalTo(@20.f);
+    }];
+    
+    [_betweenLine mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_submitUserLogin.mas_bottom).with.offset(13.f);
+        make.centerX.equalTo(_contentContainer.mas_centerX);
+    }];
+    
+    [_findPW mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_submitUserLogin.mas_bottom).with.offset(10.f);
+        make.centerX.equalTo(_contentContainer.mas_centerX).with.offset(50.f);
+        make.width.equalTo(@90.f);
+        make.height.equalTo(@20.f);
+    }];
+    
+    [_joinFF mas_makeConstraints:^(MASConstraintMaker *make) {
+        make.top.equalTo(_findID.mas_bottom).with.offset(20.f);
+        make.left.equalTo(_contentContainer.mas_left).with.offset(12.5f);
+        make.right.equalTo(_contentContainer.mas_right).with.offset(-12.5f);
+        make.bottom.equalTo(_contentContainer.mas_bottom).with.offset(-12.5f);
+    }];
+}
+
+- (void) goUserLogin:(id) sender
+{
+    if (_userLoginHandler)
+    {
+        _userLoginHandler();
+    }
+}
+
+- (NSDictionary *)userLoginResult
+{
+    NSString *savedUserId = [[NSUserDefaults standardUserDefaults] objectForKey:@"userID"];
+    if ([savedUserId length] == 0) {
+    [[NSUserDefaults standardUserDefaults] setObject:@"NO_MB_ID" forKey:@"userCode"];
+    [[NSUserDefaults standardUserDefaults] setObject:_userIdTxtField.text forKey:@"userID"];
+    }
+    NSMutableDictionary *userLoginInfo = @{
+                                           @"comCode":@"NO_MB_ID",
+                                           @"userId":_userIdTxtField.text,
+                                           @"userPw":_userPwTxtField.text
+                                           }.mutableCopy;
+    return userLoginInfo;
+}
+
+- (void) findUserID:(id)sender
+{
+    // 새 브라우저 이동 로직 구현
+    if (_findIdHandler) {
+        _findIdHandler();
+    }
+}
+
+- (void) findUserPW:(id)sender
+{
+    // 새 브라우저 이동 로직 구현
+    if (_findPwHandler) {
+        _findPwHandler();
+    }
+}
+
+- (void) goJoinPage:(id)sender
+{
+    // 회원가입 화면으로 이동
+    if (_joinFfHandler) {
+        _joinFfHandler();
+    }
+}
+
+#pragma mark - Keyboard Effect
+- (BOOL) textFieldShouldReturn:(FFTextField *)textField
+{
+    if ([textField isEqual:_userIdTxtField]) {
+        [_userPwTxtField becomeFirstResponder];
+    }  else {
+        [_userPwTxtField resignFirstResponder];
+        _userLoginHandler();
+    }
+    return YES;
+}
+
+- (void) setUserCode:(NSString *)userID
+{
+    NSLog(@"넘어온 개인코드 = %@", userID);
+    if ([userID length] != 0) {
+        
+    }
+}
+
+- (void) setUserID:(NSString *)userID
+{
+    NSLog(@"넘어온 개인회원 아이디 = %@", userID);
+    if ([userID length] != 0) {
+        _userIdTxtField.text = userID;
+    }
+}
+@end

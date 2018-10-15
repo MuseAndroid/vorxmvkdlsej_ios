@@ -1,0 +1,44 @@
+//
+//  FFCapchaView.h
+//  factFinder
+//
+//  Created by Hong Junho on . 1. 3.2018.
+//  Copyright © 2018년 Hong Junho. All rights reserved.
+//
+
+#import "FFView.h"
+
+@interface FFCaptcahView : FFView <UITextFieldDelegate>
+
+/**
+ 캡챠코드 입력 후 누르는 확인버튼의 이벤트 Handler
+ */
+@property (copy) void (^confirmHandler)(void);
+
+@property (copy) void (^reCaptchaHandler)(void);
+
+@property (atomic) UIImageView *captcahImage;
+
+@property (strong, nonatomic) UIButton *confirmButton;
+
+@property (strong, nonatomic) UIButton *reCaptchaButton;
+
+@property (nonatomic) BOOL confirmValidation;
+
+/**
+ 입력한 캡챠코드를 리턴값으로 하는 메서드
+
+ @return 입력한 캡챠코드 값 (형식 : NSString)
+ */
+- (NSString *) confirmTxt;
+
+-(instancetype) init;
+
+/**
+ btn1Click 메서드를 통해 받은 캡챠 이미지를 전달받아 표현하는 메서드
+
+ @param imgData 복호화된 캡챠 이미지 데이터 (형식 NSData)
+ */
+- (void) setCapchaImage:(NSData *)imgData;
+
+@end
